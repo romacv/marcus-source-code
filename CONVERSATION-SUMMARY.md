@@ -1,16 +1,16 @@
-# Markus project - саммари переписки для нового чата
+# Marcus project - саммари переписки для нового чата
 
-> Контекст для продолжения работы над проектом Markus в новом чате с Claude.
+> Контекст для продолжения работы над проектом Marcus в новом чате с Claude.
 
 ## Кто я
 
-Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, Apple frameworks). Сейчас работаю в Paste (pasteapp.io). Базируюсь в Ubud, Bali. Запускаю side project Markus.
+Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, Apple frameworks). Сейчас работаю в Paste (pasteapp.io). Базируюсь в Ubud, Bali. Запускаю side project Marcus.
 
 Использую TypeScript на Cloudflare Workers для backend (не Swift). Знаком с MCP протоколом, Anthropic Connectors Directory, GitHub API.
 
-## Что такое Markus
+## Что такое Marcus
 
-**Markus - Auto Second Brain**
+**Marcus - Auto Second Brain**
 
 Приватная AI-powered база знаний жизни. Юзер записывает все (заметки, дневник, фото-саммари), хранится в его собственном приватном GitHub репозитории как связанные .md файлы.
 
@@ -44,8 +44,8 @@ Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, App
 - BYOK + proxy hybrid (proxy default)
 
 ### Brand
-- Название - **Markus** (filed как stylized или compound, не bare word)
-- Title/tagline - **"Markus - Auto Second Brain"**
+- Название - **Marcus** (filed как stylized или compound, не bare word)
+- Title/tagline - **"Marcus - Auto Second Brain"**
 - Trademark scope - Classes 9 + 42, US first, нужен attorney
 - **Никогда** не использовать "Building a Second Brain" anywhere (Forte Labs trademark)
 - **Никогда** не делать "Second Brain" legal product name
@@ -64,11 +64,11 @@ Claude / ChatGPT / Perplexity
          |
          | MCP протокол (HTTPS + OAuth 2.1)
          v
-   Cloudflare Worker (Markus MCP сервер)
+   Cloudflare Worker (Marcus MCP сервер)
          |
          | GitHub App (installation token, 1h TTL)
          v
-   user/markus-vault (private repo)
+   user/marcus-vault (private repo)
 ```
 
 **9 MCP tools:**
@@ -92,7 +92,7 @@ Claude / ChatGPT / Perplexity
 50-resources/
 60-photos/
 90-archive/
-_markus/
+_marcus/
 index.md
 ```
 
@@ -100,20 +100,20 @@ Wikilinks стандартный Obsidian `[[Title]]` синтаксис для 
 
 ## OAuth flow для юзера
 
-1. Юзер вставляет URL `https://mcp.markus.app/sse` в claude.ai/settings/connectors
+1. Юзер вставляет URL `https://mcp.marcus.app/sse` в claude.ai/settings/connectors
 2. Claude автоматически делает Dynamic Client Registration через MCP OAuth 2.1 spec
 3. Открывается popup с GitHub OAuth
-4. Юзер authorize Markus и install Markus App на репо `markus-vault`
-5. Markus коммитит автосозданный private repo из template
+4. Юзер authorize Marcus и install Marcus App на репо `marcus-vault`
+5. Marcus коммитит автосозданный private repo из template
 6. Готово, 30-45 секунд
 
-**Markus = OAuth issuer для Claude + OAuth client для GitHub.** Claude никогда не видит GitHub токен, только Markus bearer.
+**Marcus = OAuth issuer для Claude + OAuth client для GitHub.** Claude никогда не видит GitHub токен, только Marcus bearer.
 
 ## Что хранится на сервере (честно)
 
 **Хранится в Workers KV (encrypted, per-user envelope key + master key в Workers Secrets):**
-- Markus user_id -> GitHub installation_id mapping
-- Markus bearer токены (выданные Claude)
+- Marcus user_id -> GitHub installation_id mapping
+- Marcus bearer токены (выданные Claude)
 - Rate limit counters (TTL 24h)
 - Audit log хеши (sha256 + daily pepper, TTL 30d)
 
@@ -129,7 +129,7 @@ Wikilinks стандартный Obsidian `[[Title]]` синтаксис для 
 1. **GitHub UX hurdle для mass market** - спрятать "GitHub" под "your private vault"
 2. **Anthropic / OpenAI / Perplexity platform risk** - митигация: multi-vendor + GitHub-as-storage means data survives shutdown
 3. **Apple App Store Guideline 5.1.2(i)** (ноябрь 2025) - per-AI-provider consent для v2 iOS app
-4. **Trademark Markus** - filing stylized/compound, attorney engaged
+4. **Trademark Marcus** - filing stylized/compound, attorney engaged
 
 ## Конкуренты ключевые
 
@@ -142,21 +142,21 @@ Wikilinks стандартный Obsidian `[[Title]]` синтаксис для 
 - **Foam** - GitHub storage, но developer-only VS Code extension, нет AI
 - **Obsidian** - 1.5M+ users, free for commercial, plugin assembly для AI
 
-**Никто не комбинирует** GitHub-as-storage + multi-assistant MCP + consumer UX. Это уникальный wedge Markus.
+**Никто не комбинирует** GitHub-as-storage + multi-assistant MCP + consumer UX. Это уникальный wedge Marcus.
 
 ## Roadmap
 
 **Эта неделя:**
-- WHOIS на 6 secondary доменах (getmarkus.app, usemarkus.com, trymarkus.com, markushq.com, markusbrain.com, mymarkus.com)
+- WHOIS на 6 secondary доменах (getmarcus.app, usemarcus.com, trymarcus.com, marcushq.com, marcusbrain.com, mymarcus.com)
 - Lock 4-6 доменов + social handles
 - Engage US trademark attorney
-- Создать Markus GitHub org + MIT-licensed `markus-mcp-server` репо
+- Создать Marcus GitHub org + MIT-licensed `marcus-mcp-server` репо
 
 **Q3 2026 - MVP:**
 - Cloudflare Worker MCP сервер с 9 tools
 - GitHub App + OAuth flow
 - Vault template репо
-- Landing page markus.app
+- Landing page marcus.app
 - Submission в Anthropic Connectors Directory
 
 **Q4 2026 - Q1 2027 - iOS app v2:**
@@ -185,7 +185,7 @@ Wikilinks стандартный Obsidian `[[Title]]` синтаксис для 
 - Slack messages: "Hi" / "Hello", не "Hey", никогда "Thank you for reaching out"
 - Я работаю на iOS deployment target iOS 17 в Paste
 
-## Файлы проекта (markus-export)
+## Файлы проекта (marcus-export)
 
 В предыдущем чате создан полный архив:
 
@@ -206,7 +206,7 @@ Wikilinks стандартный Obsidian `[[Title]]` синтаксис для 
 1. **Прайсинг и unit economics** - детальный расчет на 1000 / 10000 / 100000 юзеров с разбивкой по tiers
 2. **MCP server skeleton** - реальный TypeScript код на Cloudflare Workers с Hono + `@modelcontextprotocol/sdk` v2 + `@cloudflare/workers-oauth-provider`
 3. **Vault template репо** - конкретный layout с примерами .md файлов и frontmatter
-4. **Landing page copy** - hero text, features section, FAQ для markus.app
+4. **Landing page copy** - hero text, features section, FAQ для marcus.app
 5. **Onboarding UX flow** - детальный screen-by-screen для mass market (60-second target)
 6. **Privacy policy и Terms** - готовые для submission в Anthropic Connectors Directory
 7. **iOS app architecture** - SwiftUI + GitHub OAuth + Sign in with Apple parallel + AutoJournal pipeline

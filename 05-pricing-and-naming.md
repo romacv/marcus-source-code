@@ -55,27 +55,27 @@ API keys никогда не хранятся в plaintext server-side: encrypt 
 
 > "$10 чтобы $20 AI которые ты уже платишь наконец-то помнили тебя"
 
-Юзер уже платит $20-60/mo за Claude Pro + ChatGPT Plus + Perplexity Pro. Markus не должен feel like another $20 - это слой памяти на существующий стек.
+Юзер уже платит $20-60/mo за Claude Pro + ChatGPT Plus + Perplexity Pro. Marcus не должен feel like another $20 - это слой памяти на существующий стек.
 
-## Финальное название: Markus
+## Финальное название: Marcus
 
 **Conditional go.** Бare word USPTO в Class 9/42 не зарегистрирован, но:
 
 ### Проблемы
 
 Active competitors в adjacent SaaS:
-- Markus AI for events (`dearmarkus.ai`, `agentmarkus.com`)
-- Markus.tech (UK ed-tech AI marking)
-- Markus at Welby (clinical AI)
-- HelloMarkus.ai (French AI marketing)
+- Marcus AI for events (`dearmarcus.ai`, `agentmarcus.com`)
+- Marcus.tech (UK ed-tech AI marking)
+- Marcus at Welby (clinical AI)
+- HelloMarcus.ai (French AI marketing)
 - Marcus.agency (B2B AI marketing)
-- HeyMarkus (European POS)
+- HeyMarcus (European POS)
 
 Marcus by Goldman Sachs доминирует "Marcus app" autocomplete.
 
 Bare-word Google SERP занят:
-- Markus Persson (Notch)
-- Markus Zusak (Book Thief)
+- Marcus Persson (Notch)
+- Marcus Zusak (Book Thief)
 - IKEA MARKUS office chair
 
 USPTO 2(e)(4) refusal risk - "primarily merely a surname".
@@ -89,23 +89,23 @@ USPTO 2(e)(4) refusal risk - "primarily merely a surname".
 ### Domain candidates (need WHOIS confirmation на этой неделе)
 
 Premium почти точно taken на 5-6 значные:
-- markus.app
-- markus.ai
-- markus.com
+- marcus.app
+- marcus.ai
+- marcus.com
 
 Secondary likely available:
-- getmarkus.app
-- usemarkus.com
-- trymarkus.com
-- markushq.com
-- markusbrain.com
-- mymarkus.com
+- getmarcus.app
+- usemarcus.com
+- trymarcus.com
+- marcushq.com
+- marcusbrain.com
+- mymarcus.com
 
 **Action: WHOIS сегодня, lock 4-6 + social handles до любого public surface.**
 
 ## Финальный title/tagline
 
-**"Markus - Auto Second Brain"**
+**"Marcus - Auto Second Brain"**
 
 Заменили оригинальный "Your AI Knowledge Base of Life".
 
@@ -117,8 +117,8 @@ Secondary likely available:
 
 ### Альтернативы (хорошие, но не финальные)
 
-- "Markus - The AI memory for everything you know."
-- "Markus - your life, indexed."
+- "Marcus - The AI memory for everything you know."
+- "Marcus - your life, indexed."
 
 ## Second Brain usage safety
 

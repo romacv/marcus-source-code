@@ -16,8 +16,8 @@
 
 ### Brand и legal
 
-- [x] Название - **Markus** (filed как stylized или compound)
-- [x] Title/tagline - **"Markus - Auto Second Brain"**
+- [x] Название - **Marcus** (filed как stylized или compound)
+- [x] Title/tagline - **"Marcus - Auto Second Brain"**
 - [x] Trademark scope - Classes 9 + 42, US first
 - [x] Никогда не использовать "Building a Second Brain" anywhere
 - [x] Никогда не делать "Second Brain" legal product name
@@ -43,17 +43,17 @@
 ### Эта неделя (immediate)
 
 1. WHOIS на 6 secondary доменах:
-   - getmarkus.app
-   - usemarkus.com
-   - trymarkus.com
-   - markushq.com
-   - markusbrain.com
-   - mymarkus.com
+   - getmarcus.app
+   - usemarcus.com
+   - trymarcus.com
+   - marcushq.com
+   - marcusbrain.com
+   - mymarcus.com
 2. Lock 4-6 доменов которые available
 3. Lock social handles (Twitter, Bluesky, GitHub, Hacker News, Reddit)
 4. Engage US trademark attorney для formal clearance Classes 9, 42
-5. Создать Markus GitHub organization
-6. Создать MIT-licensed репо `markus-mcp-server` с первым README + LICENSE
+5. Создать Marcus GitHub organization
+6. Создать MIT-licensed репо `marcus-mcp-server` с первым README + LICENSE
 
 ### Q3 2026: MVP
 
@@ -65,7 +65,7 @@ Components:
 - GitHub App с Contents read+write на single repo
 - 9 MCP tools (create_note, update_note, delete_note, search_notes, get_note, list_structure, append_to_daily_note, link_notes, get_recent_notes)
 - Vault template repo с initial structure (00-daily, 10-journal, 20-topics, 30-people, 40-projects, 50-resources, 60-photos, 90-archive)
-- Landing page markus.app с onboarding flow
+- Landing page marcus.app с onboarding flow
 - Privacy policy и Terms готовы для submission
 
 **Submission в Anthropic Connectors Directory и ChatGPT Apps Directory** в конце Q3 - после стабилизации в production 2-3 недели на early users.
@@ -146,7 +146,7 @@ Ranked by downstream consequence:
 1. "Why I store my second brain in a private GitHub repo (and why you should too)" - Show HN flagship
 2. "Stop renting your memory" - manifesto
 3. "Claude with memory - that you own - here's how MCP makes it possible in 2026"
-4. "Mem.ai vs Reflect vs Markus: which AI second brain owns your data?" - high-intent vs SEO
+4. "Mem.ai vs Reflect vs Marcus: which AI second brain owns your data?" - high-intent vs SEO
 5. "How to give Claude long-term memory without giving Anthropic your data"
 6. "What happens to your Mem.ai/Heyday data when the startup dies?" - leverages Heyday shutdown
 7. "GitHub as a personal database" - HN bait
@@ -156,7 +156,7 @@ Ranked by downstream consequence:
 
 **Referral mechanics (privacy-aligned):**
 
-- Cosmetic-only referral codes (Markus tracks только что код XYZ123 used, не кто)
+- Cosmetic-only referral codes (Marcus tracks только что код XYZ123 used, не кто)
 - Give-a-month-get-a-month
 - Public-good donation matching: 10% of paid subscriptions to EFF / Internet Archive / Signal
 - Open-source fork/star count как visible marketing метрика
@@ -188,5 +188,5 @@ Ranked by downstream consequence:
 | Apple 5.1.2(i) compliance | High | Per-provider consent в design (v2 iOS) |
 | GitHub API rate limits | Low | GitHub App per-installation limits, batch via createCommitOnBranch |
 | Auto-organization | Medium | Hybrid retrieval, deferred to v1.1 |
-| Trademark Markus | Medium | Stylized/compound filing, attorney engaged |
+| Trademark Marcus | Medium | Stylized/compound filing, attorney engaged |
 | Domain costs | Low | Secondary domains lockable now |
