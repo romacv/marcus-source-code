@@ -198,7 +198,7 @@ ChatGPT поддерживает MCP через Apps SDK и Connectors:
 
 ## 6. Публикация в ChatGPT Apps Directory
 
-OpenAI Apps SDK строится вокруг MCP server + optional UI components. Для Markus это значит: текущий remote MCP backend переиспользуется, но submission flow отличается от старых ChatGPT Actions.
+OpenAI Apps SDK строится вокруг MCP server + optional UI components. Для Marcus это значит: текущий remote MCP backend переиспользуется, но submission flow отличается от старых ChatGPT Actions.
 
 ### Подготовка
 
@@ -211,7 +211,7 @@ OpenAI Apps SDK строится вокруг MCP server + optional UI component
 ### Создание и тестирование
 
 1. В OpenAI Platform включить Developer Mode для ChatGPT Apps
-2. Подключить Markus как private/developer app по MCP URL
+2. Подключить Marcus как private/developer app по MCP URL
 3. Проверить tool calls из ChatGPT web и mobile
 4. Прогнать тест-кейсы на create/search/update/delete заметок
 5. Проверить, что tool responses не возвращают лишние user identifiers, debug payloads, tokens или PII
@@ -229,7 +229,7 @@ OpenAI Apps SDK строится вокруг MCP server + optional UI component
 
 ### Отличие от OpenAPI Actions
 
-Для ChatGPT Apps SDK не нужен OpenAPI schema как обязательный контракт. OpenAPI относится к legacy ChatGPT Actions/GPTs flow. Для Markus основной контракт — MCP tools, OAuth 2.1, metadata и optional UI resources/components.
+Для ChatGPT Apps SDK не нужен OpenAPI schema как обязательный контракт. OpenAPI относится к legacy ChatGPT Actions/GPTs flow. Для Marcus основной контракт — MCP tools, OAuth 2.1, metadata и optional UI resources/components.
 
 Официальные ссылки:
 - Apps SDK: https://developers.openai.com/apps-sdk

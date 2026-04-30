@@ -1,6 +1,6 @@
-# Markus - Auto Second Brain: Project Workspace
+# Marcus - Auto Second Brain: Project Workspace
 
-Полный архив проекта Markus, экспортированный из чата 26 апреля 2026.
+Полный архив проекта Marcus, экспортированный из чата 26 апреля 2026.
 
 ## Структура
 
@@ -25,8 +25,8 @@
 - Stack - TypeScript на Cloudflare Workers (не Swift)
 - Hosting - Cloudflare Workers Paid $5/mo, escape hatch на Hetzner CAX11
 - GTM - сарафан и соцсети, без paid ads
-- Название - Markus (filed как stylized или compound, не bare word; Classes 9 + 42, US first)
-- Title/tagline - "Markus - Auto Second Brain"
+- Название - Marcus (filed как stylized или compound, не bare word; Classes 9 + 42, US first)
+- Title/tagline - "Marcus - Auto Second Brain"
 - BYOK + proxy hybrid (proxy default)
 - AutoJournal - после MVP, по запросу юзера, в репо только текстовые описания
 - AI processing для AutoJournal - on-device через Apple Foundation Models (iOS 26+)
@@ -35,11 +35,11 @@
 
 ## Что делать на этой неделе
 
-1. Запустить WHOIS на доменах (getmarkus.app, usemarkus.com, trymarkus.com, markushq.com, markusbrain.com, mymarkus.com)
+1. Запустить WHOIS на доменах (getmarcus.app, usemarcus.com, trymarcus.com, marcushq.com, marcusbrain.com, mymarcus.com)
 2. Залочить 4-6 secondary доменов и social handles
 3. Engage trademark attorney для clearance в USPTO (Classes 9, 42)
-4. Создать Markus GitHub organization
-5. Открыть MIT-licensed репо `markus-mcp-server` с README + LICENSE
+4. Создать Marcus GitHub organization
+5. Открыть MIT-licensed репо `marcus-mcp-server` с README + LICENSE
 6. Подготовить privacy policy для будущей подачи в Anthropic Connectors Directory
 
 ## Главные риски (active)
@@ -47,7 +47,7 @@
 1. **GitHub UX hurdle для mass market** - спрятать "GitHub" под "your private vault"
 2. **Anthropic / OpenAI / Perplexity platform risk** - митигация: multi-vendor + GitHub-as-storage means data survives shutdown
 3. **Apple App Store Guideline 5.1.2(i)** (ноябрь 2025) - per-AI-provider consent для v2 iOS app
-4. **Trademark Markus** - filing stylized/compound, attorney engaged
+4. **Trademark Marcus** - filing stylized/compound, attorney engaged
 
 ## Open questions
 
