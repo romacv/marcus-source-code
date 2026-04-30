@@ -1,0 +1,70 @@
+# 00. Vision и концепция продукта
+
+## Что такое Markus
+
+Markus - Auto Second Brain.
+
+Приватная AI-powered база знаний жизни. Юзер записывает все что у него происходит (заметки, дневник, фото-саммари), все хранится в его собственном приватном GitHub репозитории как связанные .md файлы.
+
+Killer feature - remote MCP коннектор для Claude, ChatGPT и Perplexity. Юзер общается с любимым AI ассистентом, дневной чат автоматически саммаризируется в базу, на любой вопрос ассистент быстро находит контекст из прошлого.
+
+## Целевая аудитория
+
+Массовый рынок. Не разработчики и не power users. Люди которые уже платят за Claude Pro / ChatGPT Plus / Perplexity Pro и хотят чтобы эти AI помнили их жизнь.
+
+## Privacy posture
+
+Максимальная приватность. End-to-end по цепочке:
+
+```
+chat with Claude -> Markus MCP connector -> user's own GitHub private repo
+```
+
+Markus сервер - **contentless** (не stateless). Контент заметок никогда не интерпретируется, не индексируется и не сохраняется на серверах Markus. Юзер может зайти на github.com и посмотреть свои данные в исходном виде в любой момент.
+
+Minimum credentials хранятся encrypted в Workers KV (per-user envelope key + master key в Workers Secrets):
+- Markus user_id -> GitHub installation_id mapping
+- Markus bearer токены (выданные Claude/ChatGPT/Perplexity)
+- Rate limit counters (TTL 24h)
+- Audit log хеши (sha256 + daily pepper, TTL 30d)
+
+Не хранится: контент заметок, список заметок, embeddings, search index, GitHub long-lived токены (только installation_id, токены generated on-demand на 1h), юзер API keys для Claude/OpenAI/Perplexity (BYOK encrypted client-side).
+
+## Монетизация
+
+Subscription с rate limits на MCP коннектор.
+
+Тарифы:
+- Free: 50 MCP calls/day, 100 заметок max, BYOK only
+- Pro $10/mo ($96/year): 1000 calls/day, unlimited notes, BYOK or proxy
+- Pro Plus $15/mo ($144/year): 5000 calls/day, multi-device, voice capture, proxy default
+- Founders Lifetime $99 one-time
+- Family $15/mo: 5 seats, каждый со своим репо
+
+## MVP юзкейс
+
+1. Юзер заходит на markus.app
+2. Sign in with GitHub
+3. Markus авто-создает приватный репо `markus-vault` из template
+4. Юзер копирует MCP URL `https://mcp.markus.app/sse`
+5. Юзер вставляет в claude.ai/settings/connectors -> Add custom connector
+6. Все, можно работать
+
+В чате юзер пишет: "сохрани что я сегодня встретил Машу в кафе на пляже Чангу". Claude сам решает вызвать `markus.create_note` с уже саммаризированным контентом и frontmatter тегами. Markus коммитит файл в GitHub. Когда юзер позже спросит "что я делал на той неделе?", Claude через MCP search находит заметки и отвечает.
+
+## Решения зафиксированы
+
+| Вопрос | Решение |
+|---|---|
+| Целевой юзер | Массовый рынок |
+| Privacy model | End-to-end, contentless server |
+| Storage | GitHub в MVP, iCloud/Drive в v2 как описания |
+| MCP capability | Полный CRUD с управлением структурой |
+| Stack | TypeScript на Cloudflare Workers |
+| Server posture | Contentless: контент юзера не хранится, minimum credentials encrypted в Workers KV |
+| GTM | Word of mouth + социальные сети |
+| Платные тиры | Rate limits на MCP calls/day |
+| Название | Markus (финальное) |
+| Title/tagline | "Markus - Auto Second Brain" |
+| AutoJournal | После MVP, по запросу юзера |
+| Репо | Только текстовые описания, файлы остаются в iCloud/Drive |
