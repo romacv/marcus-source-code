@@ -108,6 +108,7 @@ export class GitHubClient {
 				Accept: "application/vnd.github+json",
 				"X-GitHub-Api-Version": "2022-11-28",
 				"Content-Type": "application/json",
+				"User-Agent": "marcus-mcp-server/0.2.0",
 				...(opts.headers ?? {}),
 			},
 		});

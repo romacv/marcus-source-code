@@ -1,5 +1,5 @@
 const GITHUB_API = "https://api.github.com";
-export const VAULT_REPO_NAME = "marcus-auto-second-brain";
+export const VAULT_REPO_NAME = "marcus-second-brain-vault";
 
 type OAuthEnv = {
 	GITHUB_CLIENT_ID: string;
@@ -32,6 +32,7 @@ function githubHeaders(token: string): HeadersInit {
 		Accept: "application/vnd.github+json",
 		"X-GitHub-Api-Version": "2022-11-28",
 		"Content-Type": "application/json",
+		"User-Agent": "marcus-mcp-server/0.2.0",
 	};
 }
 
@@ -45,8 +46,9 @@ export async function exchangeCodeForUserToken(code: string, env: OAuthEnv): Pro
 			code,
 		}),
 	});
-	const data = (await res.json()) as { access_token?: string; error?: string };
-	if (!data.access_token) throw new Error(`GitHub token exchange failed: ${data.error ?? res.status}`);
+	const data = (await res.json()) as { access_token?: string; token_type?: string; scope?: string; error?: string; error_description?: string };
+	console.log("[token-exchange]", JSON.stringify({ status: res.status, token_prefix: data.access_token?.slice(0, 8), token_type: data.token_type, scope: data.scope, error: data.error, error_description: data.error_description }));
+	if (!data.access_token) throw new Error(`GitHub token exchange failed: ${data.error} — ${data.error_description}`);
 	return data.access_token;
 }
 
@@ -54,7 +56,11 @@ export async function getAuthenticatedUser(
 	token: string,
 ): Promise<{ login: string; id: number }> {
 	const res = await fetch(`${GITHUB_API}/user`, { headers: githubHeaders(token) });
-	if (!res.ok) throw new Error(`GitHub /user failed: ${res.status}`);
+	if (!res.ok) {
+		const body = await res.text();
+		console.error("[get-user]", res.status, body.slice(0, 200));
+		throw new Error(`GitHub /user failed: ${res.status}`);
+	}
 	return res.json() as Promise<{ login: string; id: number }>;
 }
 

@@ -2,8 +2,8 @@ import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provid
 import { Hono } from "hono";
 import type { MarcusEnv } from "./index";
 import { encryptForKv, hmacSign, hmacVerify } from "./crypto";
+import { GitHubClient } from "./github";
 import {
-	VAULT_REPO_NAME,
 	exchangeCodeForUserToken,
 	findInstallationForApp,
 	getAuthenticatedUser,
@@ -11,6 +11,7 @@ import {
 	vaultExists,
 } from "./github-oauth";
 import { homeContent, layout } from "./utils";
+import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
 
 export type Bindings = MarcusEnv & {
 	OAUTH_PROVIDER: OAuthHelpers;
@@ -18,38 +19,31 @@ export type Bindings = MarcusEnv & {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-// Homepage: renders static/README.md as markdown
 app.get("/", async (c) => {
 	const content = await homeContent(c.req.raw);
 	return c.html(layout(content, "Marcus - Auto Second Brain"));
 });
 
-// Step 1 of OAuth: Claude calls /authorize → we redirect to GitHub
+// Step 1: Claude calls /authorize → redirect to GitHub OAuth
 app.get("/authorize", async (c) => {
 	const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
 	const nonce = crypto.randomUUID();
 
-	// Store oauthReqInfo in KV (30-min TTL — enough for the GitHub auth + install flow)
 	await c.env.MARCUS_KV.put(`state:${nonce}`, JSON.stringify(oauthReqInfo), {
 		expirationTtl: 1800,
 	});
 
-	// Build HMAC-signed state param so we can verify it on callback
 	const statePayload = JSON.stringify({ nonce, ts: Date.now() });
 	const sig = await hmacSign(c.env.KV_ENCRYPTION_KEY, statePayload);
 	const state = btoa(statePayload) + "." + sig;
 
-	const params = new URLSearchParams({
-		client_id: c.env.GITHUB_CLIENT_ID,
-		scope: "repo",
-		state,
-	});
+	const params = new URLSearchParams({ client_id: c.env.GITHUB_CLIENT_ID, scope: "repo", state });
 	return c.redirect(`https://github.com/login/oauth/authorize?${params}`);
 });
 
-// OAuth callback — handles two phases:
-//   Phase 1 (?code&state):              GitHub OAuth done → create vault → redirect to App install
-//   Phase 2 (?installation_id&state):   App installed → store mapping → complete OAuth to Claude
+// Handles two phases:
+//   Phase 1 (?code&state):            GitHub OAuth → get user info → redirect to App install
+//   Phase 2 (?installation_id&state): App installed → seed vault → complete OAuth to Claude
 app.get("/auth/github/callback", async (c) => {
 	const code = c.req.query("code");
 	const state = c.req.query("state");
@@ -58,15 +52,13 @@ app.get("/auth/github/callback", async (c) => {
 
 	if (!state) return c.text("Missing state parameter", 400);
 
-	// Parse and verify HMAC-signed state
 	const dotIdx = state.lastIndexOf(".");
 	if (dotIdx === -1) return c.text("Malformed state", 400);
-	const statePayload64 = state.slice(0, dotIdx);
+	const statePayloadJson = atob(state.slice(0, dotIdx));
 	const sig = state.slice(dotIdx + 1);
-	const statePayloadJson = atob(statePayload64);
 
 	if (!(await hmacVerify(c.env.KV_ENCRYPTION_KEY, statePayloadJson, sig))) {
-		return c.text("Invalid state signature — possible CSRF", 400);
+		return c.text("Invalid state signature", 400);
 	}
 
 	const statePayload = JSON.parse(statePayloadJson) as {
@@ -81,17 +73,17 @@ app.get("/auth/github/callback", async (c) => {
 		const { userId, login, nonce } = statePayload;
 		if (!userId || !login || !nonce) return c.text("Missing user context in state", 400);
 
-		// Recover oauthReqInfo stored in KV during phase 1
 		const reqJson = await c.env.MARCUS_KV.get(`state:${nonce}`);
 		if (!reqJson) return c.text("OAuth session expired. Please connect again.", 400);
 		const oauthReqInfo = JSON.parse(reqJson) as AuthRequest;
 		await c.env.MARCUS_KV.delete(`state:${nonce}`);
 
-		// Encrypt installationId and persist user→installation mapping
+		// Seed vault via installation token (has Contents R+W on the repo)
+		await seedVaultIfNeeded(c.env, installationId, login);
+
 		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, installationId);
 		await c.env.MARCUS_KV.put(`user:${userId}`, encrypted);
 
-		// Complete OAuth — Claude gets a Marcus bearer token bound to this user
 		const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
 			request: oauthReqInfo,
 			userId,
@@ -109,12 +101,11 @@ app.get("/auth/github/callback", async (c) => {
 	const user = await getAuthenticatedUser(userToken);
 	const userId = String(user.id);
 
-	// If Marcus App is already installed, skip install redirect
+	// If App already installed, seed vault if needed and complete OAuth directly
 	const existingInstallId = await findInstallationForApp(userToken, c.env.GITHUB_APP_ID);
 	if (existingInstallId) {
-		if (!(await vaultExists(userToken, user.login))) {
-			await provisionVault(userToken, user.login);
-		}
+		await seedVaultIfNeeded(c.env, existingInstallId, user.login);
+
 		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, existingInstallId);
 		await c.env.MARCUS_KV.put(`user:${userId}`, encrypted);
 
@@ -128,22 +119,16 @@ app.get("/auth/github/callback", async (c) => {
 			userId,
 			metadata: { label: user.login },
 			scope: oauthReqInfo.scope,
-			props: {
-				userId,
-				installationId: existingInstallId,
-				githubLogin: user.login,
-				repoName: VAULT_REPO_NAME,
-			},
+			props: { userId, installationId: existingInstallId, githubLogin: user.login, repoName: VAULT_REPO_NAME },
 		});
 		return c.redirect(redirectTo);
 	}
 
-	// Provision vault if needed, then redirect user to install the Marcus GitHub App
+	// No install yet → create vault repo (user token now has scope=repo), then redirect to install
 	if (!(await vaultExists(userToken, user.login))) {
 		await provisionVault(userToken, user.login);
 	}
 
-	// Build phase-2 state: same nonce (so we can look up oauthReqInfo in KV), plus user info
 	const phase2Payload = JSON.stringify({
 		nonce: statePayload.nonce,
 		ts: Date.now(),
@@ -153,12 +138,34 @@ app.get("/auth/github/callback", async (c) => {
 	const phase2Sig = await hmacSign(c.env.KV_ENCRYPTION_KEY, phase2Payload);
 	const phase2State = btoa(phase2Payload) + "." + phase2Sig;
 
-	const installParams = new URLSearchParams({ state: phase2State });
 	return c.redirect(
-		`https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${installParams}`,
+		`https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`,
 	);
 });
 
 app.get("/version", (c) => c.json({ version: "0.2.0", sha: "local-dev" }));
+
+// Seeds vault folder structure via installation token (Contents R+W).
+// Called after GitHub App is installed on the repo.
+async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: string): Promise<void> {
+	const gh = new GitHubClient(
+		env.GITHUB_APP_PRIVATE_KEY,
+		env.GITHUB_APP_ID,
+		installationId,
+		login,
+		VAULT_REPO_NAME,
+	);
+
+	// Skip if already seeded
+	try {
+		await gh.getFile("_marcus/version.txt");
+		return;
+	} catch {
+		// not seeded yet
+	}
+
+	// Seed in one atomic commit
+	await gh.createCommitOnBranch("main", "marcus: initialize vault structure", VAULT_SEED_FILES);
+}
 
 export default app;

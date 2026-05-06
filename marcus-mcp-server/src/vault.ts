@@ -1,3 +1,21 @@
+export const VAULT_REPO_NAME = "marcus-second-brain-vault";
+
+export const VAULT_SEED_FILES: Array<{ path: string; content: string }> = [
+	{ path: "00-daily/.gitkeep", content: "" },
+	{ path: "10-journal/.gitkeep", content: "" },
+	{ path: "20-topics/.gitkeep", content: "" },
+	{ path: "30-people/.gitkeep", content: "" },
+	{ path: "40-projects/.gitkeep", content: "" },
+	{ path: "50-resources/.gitkeep", content: "" },
+	{ path: "60-photos/.gitkeep", content: "" },
+	{ path: "90-archive/.gitkeep", content: "" },
+	{ path: "_marcus/version.txt", content: "1" },
+	{
+		path: "index.md",
+		content: "# Marcus Vault\n\nYour personal second brain. Managed by [Marcus](https://marcus-mcp-server.r-df5.workers.dev).\n",
+	},
+];
+
 // ULID: 26-char, time-sortable, URL-safe. No external dep — pure WebCrypto.
 export function generateUlid(): string {
 	const TIME_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
