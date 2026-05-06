@@ -1,3 +1,5 @@
+import { createPrivateKey, createSign } from "node:crypto";
+
 const GITHUB_API = "https://api.github.com";
 
 type FileResult = {
@@ -30,63 +32,21 @@ type TreeEntry = {
 	type: "blob" | "tree";
 };
 
-// Wraps PKCS#1 RSA key DER in a PKCS#8 PrivateKeyInfo structure.
-// GitHub App private keys are PKCS#1 (BEGIN RSA PRIVATE KEY),
-// but Web Crypto importKey("pkcs8") requires PKCS#8 (BEGIN PRIVATE KEY).
-function pkcs1ToPkcs8(pkcs1: Uint8Array): Uint8Array {
-	const encLen = (n: number): Uint8Array =>
-		n < 128 ? new Uint8Array([n]) : n < 256 ? new Uint8Array([0x81, n]) : new Uint8Array([0x82, (n >> 8) & 0xff, n & 0xff]);
-
-	// SEQUENCE { OID rsaEncryption, NULL }
-	const algoId = new Uint8Array([0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00]);
-	const version = new Uint8Array([0x02, 0x01, 0x00]);
-	const octetLen = encLen(pkcs1.length);
-	const octetString = new Uint8Array([0x04, ...octetLen, ...pkcs1]);
-
-	const body = new Uint8Array(version.length + algoId.length + octetString.length);
-	body.set(version, 0);
-	body.set(algoId, version.length);
-	body.set(octetString, version.length + algoId.length);
-
-	const bodyLen = encLen(body.length);
-	const result = new Uint8Array(1 + bodyLen.length + body.length);
-	result[0] = 0x30;
-	result.set(bodyLen, 1);
-	result.set(body, 1 + bodyLen.length);
-	return result;
-}
-
-// Signs a JWT for GitHub App authentication.
-async function signAppJwt(appId: string, privateKeyPem: string): Promise<string> {
+// Signs a JWT for GitHub App authentication using node:crypto.
+// Uses clientId as iss per GitHub's recommendation (migrating away from numeric App ID).
+// node:crypto handles PKCS#1 RSA keys natively — no manual DER wrapping needed.
+function signAppJwt(clientId: string, privateKeyPem: string): string {
 	const now = Math.floor(Date.now() / 1000);
 	const header = { alg: "RS256", typ: "JWT" };
-	const payload = { iat: now - 60, exp: now + 600, iss: appId };
+	const payload = { iat: now - 60, exp: now + 600, iss: clientId };
 
 	const enc = (obj: object) =>
 		btoa(JSON.stringify(obj)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 
 	const signingInput = `${enc(header)}.${enc(payload)}`;
-
-	// GitHub App private keys are PKCS#1 (BEGIN RSA PRIVATE KEY).
-	// Web Crypto requires PKCS#8, so we convert.
-	const pemBody = privateKeyPem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
-	const rawDer = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
-	const isPkcs8 = privateKeyPem.includes("BEGIN PRIVATE KEY");
-	const keyData = isPkcs8 ? rawDer : pkcs1ToPkcs8(rawDer);
-
-	const key = await crypto.subtle.importKey(
-		"pkcs8",
-		keyData,
-		{ name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-	const sigBytes = await crypto.subtle.sign(
-		"RSASSA-PKCS1-v1_5",
-		key,
-		new TextEncoder().encode(signingInput),
-	);
-	const sig = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
+	const sig = createSign("RSA-SHA256")
+		.update(signingInput)
+		.sign(createPrivateKey({ key: privateKeyPem, format: "pem" }), "base64")
 		.replace(/=/g, "")
 		.replace(/\+/g, "-")
 		.replace(/\//g, "_");
@@ -101,6 +61,7 @@ export class GitHubClient {
 	constructor(
 		private readonly privateKeyPem: string,
 		private readonly appId: string,
+		private readonly clientId: string,
 		private readonly installationId: string,
 		private readonly owner: string,
 		private readonly repo: string,
@@ -110,7 +71,8 @@ export class GitHubClient {
 		if (this.installationToken && Date.now() < this.tokenExpiry) {
 			return this.installationToken;
 		}
-		const jwt = await signAppJwt(this.appId, this.privateKeyPem);
+		const jwt = signAppJwt(this.clientId, this.privateKeyPem);
+		console.log("[app-jwt]", { iss_prefix: this.clientId.slice(0, 6), installationId: this.installationId, exp_in_s: 600 });
 		const res = await fetch(
 			`${GITHUB_API}/app/installations/${this.installationId}/access_tokens`,
 			{
@@ -119,10 +81,15 @@ export class GitHubClient {
 					Authorization: `Bearer ${jwt}`,
 					Accept: "application/vnd.github+json",
 					"X-GitHub-Api-Version": "2022-11-28",
+					"User-Agent": "marcus-mcp-server/0.2.0",
 				},
 			},
 		);
-		if (!res.ok) throw new Error(`GitHub token fetch failed: ${res.status}`);
+		if (!res.ok) {
+			const body = await res.text();
+			console.error("[app-token]", res.status, body.slice(0, 500));
+			throw new Error(`GitHub token fetch failed: ${res.status}: ${body}`);
+		}
 		const data = (await res.json()) as { token: string; expires_at: string };
 		this.installationToken = data.token;
 		this.tokenExpiry = new Date(data.expires_at).getTime() - 60_000;
@@ -152,15 +119,17 @@ export class GitHubClient {
 	async getFile(path: string): Promise<FileResult> {
 		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`);
 		const data = (await res.json()) as { sha: string; content: string; encoding: string };
-		const content = atob(data.content.replace(/\n/g, ""));
+		const binary = atob(data.content.replace(/\n/g, ""));
+		const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+		const content = new TextDecoder("utf-8").decode(bytes);
 		return { sha: data.sha, content };
 	}
 
-	async createFile(path: string, content: string): Promise<WriteResult> {
+	async createFile(path: string, content: string, message?: string): Promise<WriteResult> {
 		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
 			method: "PUT",
 			body: JSON.stringify({
-				message: `marcus: create ${path}`,
+				message: message ?? `marcus-mcp-server: create ${path}`,
 				content: btoa(unescape(encodeURIComponent(content))),
 			}),
 		});
@@ -168,11 +137,11 @@ export class GitHubClient {
 		return { sha: data.content.sha };
 	}
 
-	async updateFile(path: string, content: string, sha: string): Promise<WriteResult> {
+	async updateFile(path: string, content: string, sha: string, message?: string): Promise<WriteResult> {
 		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
 			method: "PUT",
 			body: JSON.stringify({
-				message: `marcus: update ${path}`,
+				message: message ?? `marcus-mcp-server: update ${path}`,
 				content: btoa(unescape(encodeURIComponent(content))),
 				sha,
 			}),
@@ -181,11 +150,11 @@ export class GitHubClient {
 		return { sha: data.content.sha };
 	}
 
-	async deleteFile(path: string, sha: string): Promise<void> {
+	async deleteFile(path: string, sha: string, message?: string): Promise<void> {
 		await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
 			method: "DELETE",
 			body: JSON.stringify({
-				message: `marcus: delete ${path}`,
+				message: message ?? `marcus-mcp-server: delete ${path}`,
 				sha,
 			}),
 		});
@@ -263,6 +232,7 @@ export class GitHubClient {
 			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
+				"User-Agent": "marcus-mcp-server/0.2.0",
 			},
 			body: JSON.stringify({
 				query: mutation,
@@ -276,6 +246,10 @@ export class GitHubClient {
 				},
 			}),
 		});
+		if (!res.ok) {
+			const body = await res.text();
+			throw new Error(`GraphQL HTTP ${res.status}: ${body}`);
+		}
 		const data = (await res.json()) as {
 			data?: { createCommitOnBranch: { commit: { oid: string } } };
 			errors?: unknown;

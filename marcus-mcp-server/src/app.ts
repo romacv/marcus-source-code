@@ -188,6 +188,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 	const gh = new GitHubClient(
 		env.GITHUB_APP_PRIVATE_KEY,
 		env.GITHUB_APP_ID,
+		env.GITHUB_CLIENT_ID,
 		installationId,
 		login,
 		VAULT_REPO_NAME,
@@ -202,7 +203,17 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 	}
 
 	// Seed in one atomic commit
-	await gh.createCommitOnBranch("main", "marcus: initialize vault structure", VAULT_SEED_FILES);
+	await gh.createCommitOnBranch(
+		"main",
+		[
+			"marcus-mcp-server: initialize vault structure",
+			"",
+			`User: @${login}`,
+			"Via: GitHub App installation",
+			"Folders: 00-daily, 10-journal, 20-topics, 30-people, 40-projects, 50-resources, 60-photos, 90-archive",
+		].join("\n"),
+		VAULT_SEED_FILES,
+	);
 }
 
 export default app;

@@ -49,10 +49,33 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 		return new GitHubClient(
 			this.env.GITHUB_APP_PRIVATE_KEY,
 			this.env.GITHUB_APP_ID,
+			this.env.GITHUB_CLIENT_ID,
 			this.props.installationId,
 			this.props.githubLogin,
 			this.props.repoName,
 		);
+	}
+
+	private getClient(): string {
+		try {
+			const info = this.server.server.getClientVersion();
+			if (info?.name) return `${info.name}${info.version ? ` ${info.version}` : ""}`;
+		} catch {}
+		return "unknown client";
+	}
+
+	private buildCommit(opts: { title: string; tool: string; extras?: Record<string, string> }): string {
+		const lines = [
+			`marcus-mcp-server: ${opts.title}`,
+			"",
+			`Tool: ${opts.tool}`,
+			`User: @${this.props?.githubLogin ?? "unknown"}`,
+			`Client: ${this.getClient()}`,
+		];
+		if (opts.extras) {
+			for (const [k, v] of Object.entries(opts.extras)) lines.push(`${k}: ${v}`);
+		}
+		return lines.join("\n");
 	}
 
 	async init() {
@@ -82,7 +105,12 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					...frontmatter,
 				});
 				const fullContent = `${fm}\n\n${content}`;
-				const result = await this.github.createFile(path, fullContent);
+				const msg = this.buildCommit({
+					title: `create ${path}`,
+					tool: "create_note",
+					extras: frontmatter?.tags?.length ? { Tags: frontmatter.tags.join(", ") } : undefined,
+				});
+				const result = await this.github.createFile(path, fullContent, msg);
 				return {
 					content: [
 						{
@@ -140,7 +168,12 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				else newBody = `${content}\n\n${existingBody}`;
 
 				const fullContent = `${updatedFm}\n\n${newBody}`;
-				const result = await this.github.updateFile(path, fullContent, current.sha);
+				const msg = this.buildCommit({
+					title: `update ${path} (${mode})`,
+					tool: "update_note",
+					extras: { Mode: mode },
+				});
+				const result = await this.github.updateFile(path, fullContent, current.sha, msg);
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({ path, sha: result.sha }) }],
 				};
@@ -165,15 +198,27 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				const current = await this.github.getFile(path);
 				if (mode === "archive") {
 					const dest = archivePath(path);
-					await this.github.createFile(dest, current.content);
-					await this.github.deleteFile(path, current.sha);
+					await this.github.createFile(
+						dest,
+						current.content,
+						this.buildCommit({ title: `archive ${path} → ${dest}`, tool: "delete_note", extras: { Mode: "archive" } }),
+					);
+					await this.github.deleteFile(
+						path,
+						current.sha,
+						this.buildCommit({ title: `remove ${path} (archived)`, tool: "delete_note", extras: { Mode: "archive", "Archived-To": dest } }),
+					);
 					return {
 						content: [
 							{ type: "text" as const, text: JSON.stringify({ archived_to: dest }) },
 						],
 					};
 				}
-				await this.github.deleteFile(path, current.sha);
+				await this.github.deleteFile(
+					path,
+					current.sha,
+					this.buildCommit({ title: `delete ${path}`, tool: "delete_note", extras: { Mode: "hard" } }),
+				);
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({ deleted: path }) }],
 				};
@@ -262,28 +307,36 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 			async ({ content, heading }) => {
 				const today = new Date();
 				const path = dailyNotePath(today);
-				const timestamp = today.toISOString();
+				const ts = today.toISOString();
+				const dateStr = ts.slice(0, 10);
 				const entry = heading
 					? `\n\n## ${heading}\n\n${content}`
-					: `\n\n<!-- ${timestamp} -->\n\n${content}`;
+					: `\n\n<!-- ${ts} -->\n\n${content}`;
 
 				let sha: string | undefined;
-				try {
-					const current = await this.github.getFile(path);
-					const result = await this.github.updateFile(path, current.content + entry, current.sha);
-					sha = result.sha;
-				} catch {
-					// Note doesn't exist yet — create it
-					const fm = buildFrontmatter({
-						id: generateUlid(),
-						created: timestamp,
-						updated: timestamp,
-						source: "chat",
-						tags: ["daily"],
+				for (let attempt = 0; attempt < 2; attempt++) {
+					const existing = await this.github.getFile(path).catch((e: unknown) => {
+						if (!/→ 404:/.test(String(e))) throw e;
+						return null;
 					});
-					const result = await this.github.createFile(path, `${fm}\n\n# ${today.toISOString().slice(0, 10)}${entry}`);
-					sha = result.sha;
+					const body = existing
+						? existing.content + entry
+						: `${buildFrontmatter({ id: generateUlid(), created: ts, updated: ts, source: "chat", tags: ["daily"] })}\n\n# ${dateStr}${entry}`;
+					const msg = this.buildCommit({
+						title: existing ? `daily ${dateStr}: append entry` : `daily ${dateStr}: create note`,
+						tool: "append_to_daily_note",
+						extras: heading ? { Heading: heading } : undefined,
+					});
+					console.log("[append-daily]", { path, outcome: existing ? "update" : "create", attempt });
+					try {
+						sha = await this.github.createCommitOnBranch("main", msg, [{ path, content: body }]);
+						break;
+					} catch (e: unknown) {
+						if (attempt === 0 && /HEAD_REF_OUTDATED|expectedHeadOid|409/i.test(String(e))) continue;
+						throw e;
+					}
 				}
+
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({ path, sha }) }],
 				};
@@ -332,7 +385,11 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						status: "draft",
 						stub: true,
 					});
-					await this.github.createFile(target_path, `${fm}\n\n# ${name}\n\n<!-- stub -->`);
+					await this.github.createFile(
+						target_path,
+						`${fm}\n\n# ${name}\n\n<!-- stub -->`,
+						this.buildCommit({ title: `create stub ${target_path}`, tool: "link_notes", extras: { "Stub-For": source_path } }),
+					);
 					targetCreated = true;
 				}
 
@@ -349,6 +406,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					source_path,
 					`${updatedFm}\n\n${body}`,
 					source.sha,
+					this.buildCommit({ title: `link ${source_path} → ${target_path}`, tool: "link_notes" }),
 				);
 
 				return {
