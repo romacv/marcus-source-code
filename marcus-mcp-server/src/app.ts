@@ -1,5 +1,6 @@
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
+import { raw } from "hono/html";
 import type { MarcusEnv } from "./index";
 import { encryptForKv, hmacSign, hmacVerify } from "./crypto";
 import { GitHubClient } from "./github";
@@ -154,7 +155,7 @@ app.get("/vault/setup", (c) => {
 	const githubNewRepoUrl = `https://github.com/new?name=${VAULT_REPO_NAME}&visibility=private&description=Marcus+second+brain+vault`;
 	const installUrl = `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(state)}`;
 
-	return c.html(layout(
+	const content = raw(
 		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
 			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">One more step</h1>
 			<p style="color:var(--muted);margin-bottom:2rem">Marcus stores your notes in a private GitHub repository. Create it now — it takes 10 seconds.</p>
@@ -171,8 +172,8 @@ app.get("/vault/setup", (c) => {
 			</div>
 			<p style="color:var(--subtle);font-size:.8rem;margin-top:1.5rem">Repo will be: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
 		</div>`,
-		"Marcus — Create your vault",
-	));
+	);
+	return c.html(layout(content, "Marcus — Create your vault"));
 });
 
 app.get("/version", (c) => c.json({ version: "0.2.0", sha: "local-dev" }));
