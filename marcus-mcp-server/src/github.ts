@@ -129,7 +129,7 @@ export class GitHubClient {
 		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
 			method: "PUT",
 			body: JSON.stringify({
-				message: `markus: create ${path}`,
+				message: `marcus: create ${path}`,
 				content: btoa(unescape(encodeURIComponent(content))),
 			}),
 		});
@@ -141,7 +141,7 @@ export class GitHubClient {
 		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
 			method: "PUT",
 			body: JSON.stringify({
-				message: `markus: update ${path}`,
+				message: `marcus: update ${path}`,
 				content: btoa(unescape(encodeURIComponent(content))),
 				sha,
 			}),
@@ -154,7 +154,7 @@ export class GitHubClient {
 		await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
 			method: "DELETE",
 			body: JSON.stringify({
-				message: `markus: delete ${path}`,
+				message: `marcus: delete ${path}`,
 				sha,
 			}),
 		});

@@ -1,31 +1,31 @@
 # 06. Название и trademark
 
-## Финальное название: Markus
+## Финальное название: Marcus
 
 **Conditional go.** Bare word USPTO в Class 9/42 не зарегистрирован, но есть проблемы:
 
 ### Конкурирующие использования
 
 Active competitors в adjacent SaaS:
-- Markus AI for events (`dearmarkus.ai`, `agentmarkus.com`) — press в Q1 2026
-- Markus.tech — UK ed-tech AI marking
-- Markus at Welby — clinical AI assistant
-- HelloMarkus.ai — French AI marketing employee
+- Marcus AI for events (`dearmarcus.ai`, `agentmarcus.com`) — press в Q1 2026
+- Marcus.tech — UK ed-tech AI marking
+- Marcus at Welby — clinical AI assistant
+- HelloMarcus.ai — French AI marketing employee
 - Marcus.agency — B2B AI marketing €2.5K/mo
-- HeyMarkus — European restaurant/cinema POS
+- HeyMarcus — European restaurant/cinema POS
 
 Marcus by Goldman Sachs доминирует "Marcus app" autocomplete.
 
 Bare-word Google SERP занят:
-- Markus Persson (Notch / Minecraft)
-- Markus Zusak (The Book Thief)
-- IKEA MARKUS office chair
+- Marcus Persson (Notch / Minecraft)
+- Marcus Zusak (The Book Thief)
+- IKEA MARCUS office chair
 
 **Слово эффективно нерankable как brand на годы.**
 
 ### USPTO risk
 
-2(e)(4) refusal risk: "primarily merely a surname" — Markus common given name. Stylized logo или compound (`MARKUS AI`, `MARKUS BRAIN`) substantially improves registrability.
+2(e)(4) refusal risk: "primarily merely a surname" — Marcus common given name. Stylized logo или compound (`MARCUS AI`, `MARCUS BRAIN`) substantially improves registrability.
 
 ### Митигации
 
@@ -36,17 +36,17 @@ Bare-word Google SERP занят:
 ### Domain candidates (нужен WHOIS)
 
 Premium почти точно taken на 5–6 значные суммы:
-- markus.app
-- markus.ai
-- markus.com
+- marcus.app
+- marcus.ai
+- marcus.com
 
 Secondary likely available:
-- getmarkus.app
-- usemarkus.com
-- trymarkus.com
-- markushq.com
-- markusbrain.com
-- mymarkus.com
+- getmarcus.app
+- usemarcus.com
+- trymarcus.com
+- marcushq.com
+- marcusbrain.com
+- mymarcus.com
 
 **Action: WHOIS сегодня, lock 4–6 + social handles до любого public surface.**
 
@@ -54,7 +54,7 @@ Secondary likely available:
 
 ## Финальный title/tagline
 
-**"Markus - Auto Second Brain"**
+**"Marcus - Auto Second Brain"**
 
 Заменили оригинальный "Your AI Knowledge Base of Life".
 
@@ -64,8 +64,8 @@ Secondary likely available:
 3. `thesecondbrain.io` homepage tagline: "The AI Knowledge Base That Actually Works" — near-identical concept
 
 Альтернативы (хорошие, но не финальные):
-- "Markus - The AI memory for everything you know."
-- "Markus - your life, indexed."
+- "Marcus - The AI memory for everything you know."
+- "Marcus - your life, indexed."
 
 ---
 

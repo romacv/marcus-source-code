@@ -1,5 +1,7 @@
 # 02. Техническая архитектура MVP
 
+> Sections ниже — всё в рамках MVP scope, если не помечено иначе. Beyond MVP → раздел в конце.
+
 ## Hosting
 
 **Cloudflare Workers Paid plan, $5/mo.** Stack:
@@ -11,7 +13,7 @@ Escape hatch на Hetzner CAX11 (€3.79/mo, 2 vCPU / 4 GB / 20 TB egress) с т
 
 ### Почему Workers выиграли
 
-1. Free egress в GitHub - каждый Markus tool call это "validate token + 1-3 GitHub API hits", egress доминирует bill
+1. Free egress в GitHub - каждый Marcus tool call это "validate token + 1-3 GitHub API hits", egress доминирует bill
 2. SSE без duration limit на Workers responses (100s figure online это Cloudflare CDN limit, не Workers)
 3. CPU bumped до 5 минут в марте 2025
 4. First-mover support в Claude / ChatGPT / Perplexity remote-MCP клиентах
@@ -42,7 +44,7 @@ Onboarding два экрана: OAuth + install на новый репо.
 
 Шаги при первом sign-in:
 
-1. Юзер OAuth токен создает private repo через `POST /repos/{template_owner}/{template_repo}/generate` с `private: true` против Markus-owned template repository
+1. Юзер OAuth токен создает private repo через `POST /repos/{template_owner}/{template_repo}/generate` с `private: true` против Marcus-owned template repository
 2. GitHub App автоматически устанавливается на новый репо
 3. С этого момента все writes идут через installation tokens
 
@@ -50,18 +52,18 @@ Onboarding два экрана: OAuth + install на новый репо.
 
 ## Summarization
 
-**Происходит в чат-клиенте юзера, не на Markus сервере.** Это та архитектурная решение которое делает privacy story честной.
+**Происходит в чат-клиенте юзера, не на Marcus сервере.** Это та архитектурная решение которое делает privacy story честной.
 
 Flow:
 1. Юзер говорит "сохрани это в second brain"
-2. Claude / ChatGPT решает что persist и зовет `markus.create_note(path, content, frontmatter)` с markdown который host AI уже саммаризировал, redacted и frontmatter-tagged
-3. Markus валидирует JSON Schema и коммитит в GitHub без интерпретации, summarization, embedding или indexing контента
+2. Claude / ChatGPT решает что persist и зовет `marcus.create_note(path, content, frontmatter)` с markdown который host AI уже саммаризировал, redacted и frontmatter-tagged
+3. Marcus валидирует JSON Schema и коммитит в GitHub без интерпретации, summarization, embedding или indexing контента
 
 Два следствия:
 
-**Markus content-blind by construction** - юзер может публично проаудить.
+**Marcus content-blind by construction** - юзер может публично проаудить.
 
-**On-device LLM становится fully supported path** - privacy-extreme юзер может wire Apple Foundation Models на iOS 26+ к тому же Markus MCP серверу, и pipeline становится device -> Markus -> user GitHub без cloud LLM.
+**On-device LLM становится fully supported path** - privacy-extreme юзер может wire Apple Foundation Models на iOS 26+ к тому же Marcus MCP серверу, и pipeline становится device -> Marcus -> user GitHub без cloud LLM.
 
 ## MCP tool surface (9 tools, Zod schemas)
 
@@ -87,7 +89,7 @@ Deferred для v1.1:
 Гибрид PARA + Johnny Decimal + Zettelkasten + Obsidian:
 
 ```
-markus-vault/
+marcus-vault/
 ├── 00-daily/              # Daily notes по датам
 │   └── 2026/04/2026-04-26.md
 ├── 10-journal/            # Журналинг записи
@@ -97,7 +99,7 @@ markus-vault/
 ├── 50-resources/          # Reference materials
 ├── 60-photos/             # Photo descriptions (не сами фото)
 ├── 90-archive/            # Archived
-├── _markus/
+├── _marcus/
 │   ├── schema.json        # Schema для будущих миграций
 │   └── version.txt
 └── index.md               # Map of content
@@ -106,7 +108,7 @@ markus-vault/
 Stable conventions:
 - Numeric prefixes для sortable folders
 - `index.md` map of content
-- `_markus/` для forward-migration metadata
+- `_marcus/` для forward-migration metadata
 - Content-addressed photo storage by SHA
 - Wikilinks стандартный Obsidian `[[Title]]` syntax - vault portable в любой markdown reader
 
@@ -134,12 +136,12 @@ schema_version: 1                # Forward migration marker
 
 ## Privacy proof (operational, не aspirational)
 
-Сервер **contentless** (не stateless). Контент заметок никогда не пересекает Markus сервер persistent. Но minimum credentials хранятся encrypted в Workers KV для функционирования OAuth и rate limits.
+Сервер **contentless** (не stateless). Контент заметок никогда не пересекает Marcus сервер persistent. Но minimum credentials хранятся encrypted в Workers KV для функционирования OAuth и rate limits.
 
 ### Что хранится в Workers KV (encrypted, per-user envelope key + master key в Workers Secrets, rotated quarterly)
 
-- Markus user_id -> GitHub installation_id mapping
-- Markus bearer токены (выданные Claude/ChatGPT/Perplexity)
+- Marcus user_id -> GitHub installation_id mapping
+- Marcus bearer токены (выданные Claude/ChatGPT/Perplexity)
 - Rate limit counters (TTL 24h)
 - Audit log хеши (sha256 + daily pepper, TTL 30d)
 
@@ -177,37 +179,28 @@ Reproducible-builds claims честные:
 - Byte-verify Cloudflare Worker isolate невозможно
 - Сказать это явно более credible чем pretend
 
-## Knowledge graph (за пределами MVP, но architecture-aware)
+---
+
+## Beyond MVP
+
+### Knowledge graph (v1.1)
 
 Hybrid retrieval - 2026 industry consensus:
 - Atomic notes как markdown + YAML в GitHub
-- Graph и embeddings derived на Markus серверах
+- Graph и embeddings derived на Marcus серверах
 - Recompute on demand
 - Vector + graph + keyword
 
 Open sub-question: где graph store живет
-- Neo4j или Memgraph как Markus-side service - лучше recall но менее portable
-- JSON file derived в user repo - portable но slower
+- Neo4j или Memgraph как Marcus-side service — лучше recall но менее portable
+- JSON file derived в user repo — portable но slower
 
 Решить когда дойдем до v1.1.
 
-## Roadmap
+### iOS app v2 (AutoJournal)
 
-**Q3 2026: MVP web/desktop**
-- Cloudflare Workers MCP сервер
-- 9 MCP tools
-- Claude / ChatGPT / Perplexity custom connectors
-- GitHub OAuth + App
-- Submission в Anthropic Connectors Directory
+Детали → [08-v2-autojournal.md](./08-v2-autojournal.md).
 
-**Q4 2026 - Q1 2027: iOS app**
-- PhotoKit + Vision framework integration
-- Apple Foundation Models on-device summarization
-- AutoJournal feature по запросу юзера
-- Sign in with Apple parallel option
-- Apple 5.1.2(i) compliance с per-provider consent
+### Roadmap
 
-**2027: Android**
-- Только после iOS validation consumer demand curve
-
-PWA-as-fallback на каждом stage.
+Детальный roadmap → [07-roadmap-and-decisions.md](./07-roadmap-and-decisions.md).

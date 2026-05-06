@@ -2,19 +2,19 @@
 
 ---
 
-# Markus project - саммари переписки для нового чата
+# Marcus project - саммари переписки для нового чата
 
-> Контекст для продолжения работы над проектом Markus в новом чате с Claude.
+> Контекст для продолжения работы над проектом Marcus в новом чате с Claude.
 
 ## Кто я
 
-Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, Apple frameworks). Сейчас работаю в Paste (pasteapp.io). Базируюсь в Ubud, Bali. Запускаю side project Markus.
+Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, Apple frameworks). Сейчас работаю в Paste (pasteapp.io). Базируюсь в Ubud, Bali. Запускаю side project Marcus.
 
 Использую TypeScript на Cloudflare Workers для backend (не Swift). Знаком с MCP протоколом, Anthropic Connectors Directory, GitHub API.
 
-## Что такое Markus
+## Что такое Marcus
 
-**Markus - Auto Second Brain**
+**Marcus - Auto Second Brain**
 
 Приватная AI-powered база знаний жизни. Юзер записывает все (заметки, дневник, фото-саммари), хранится в его собственном приватном GitHub репозитории как связанные .md файлы.
 
@@ -48,8 +48,8 @@ Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, App
 - BYOK + proxy hybrid (proxy default)
 
 ### Brand
-- Название - **Markus** (filed как stylized или compound, не bare word)
-- Title/tagline - **"Markus - Auto Second Brain"**
+- Название - **Marcus** (filed как stylized или compound, не bare word)
+- Title/tagline - **"Marcus - Auto Second Brain"**
 - Trademark scope - Classes 9 + 42, US first, нужен attorney
 - **Никогда** не использовать "Building a Second Brain" anywhere (Forte Labs trademark)
 - **Никогда** не делать "Second Brain" legal product name

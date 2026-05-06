@@ -1,4 +1,4 @@
-# Markus MVP Prototype Plan
+# Marcus MVP Prototype Plan
 
 > Executable план от нулевого кода до limited beta. Читай вместе с `02-architecture.md` (tech), `03-mcp-oauth-flow.md` (OAuth) и `04-mcp-connector-guide.md` (submission).
 
@@ -6,21 +6,21 @@
 
 ## Цель MVP
 
-Работающий remote MCP коннектор для Claude / ChatGPT / Perplexity. Юзер подключает его за 30–45 секунд через "Sign in with GitHub" на лендинге `markus.app`. Markus сам создаёт приватный `markus-vault` репо из template. Никаких токенов руками, никаких CLI команд.
+Работающий remote MCP коннектор для Claude / ChatGPT / Perplexity. Юзер подключает его за 30–45 секунд через "Sign in with GitHub" на лендинге `marcus.app`. Marcus сам создаёт приватный `marcus-vault` репо из template. Никаких токенов руками, никаких CLI команд.
 
 ---
 
 ## P0 — Admin (неделя 1)
 
 **Что делаем:**
-1. WHOIS на 6 secondary доменах: `getmarkus.app`, `usemarkus.com`, `trymarkus.com`, `markushq.com`, `markusbrain.com`, `mymarkus.com`
+1. WHOIS на 6 secondary доменах: `getmarcus.app`, `usemarcus.com`, `trymarcus.com`, `marcushq.com`, `marcusbrain.com`, `mymarcus.com`
 2. Залочить 4–6 из них которые available + social handles (Twitter, Bluesky, GitHub, HackerNews, Reddit)
 3. Engage US trademark attorney — clearance для Classes 9 + 42 (USPTO), stylized или compound filing
-4. Создать GitHub org `markus-app`
-5. Открыть MIT-licensed репо `markus-mcp-server` с README + LICENSE
+4. Создать GitHub org `marcus-app`
+5. Открыть MIT-licensed репо `marcus-mcp-server` с README + LICENSE
 
 **Acceptance criteria:**
-- Репо `markus-app/markus-mcp-server` публичен с README и LICENSE
+- Репо `marcus-app/marcus-mcp-server` публичен с README и LICENSE
 - Attorney engaged (email подтверждение)
 - 4+ доменов и matching social handles залочены
 
@@ -30,15 +30,15 @@
 
 **Что делаем:**
 ```bash
-npm create cloudflare@latest markus-mcp-server -- --template=cloudflare/ai/demos/remote-mcp-server
+npm create cloudflare@latest marcus-mcp-server -- --template=cloudflare/ai/demos/remote-mcp-server
 ```
 - Подключить Hono adapter
 - Добавить `@modelcontextprotocol/sdk` v2
-- Deploy на `mcp.markus.app/sse`
+- Deploy на `mcp.marcus.app/sse`
 - `/version` endpoint возвращает deployed git SHA
 
 **Acceptance criteria:**
-- `npx @modelcontextprotocol/inspector https://mcp.markus.app/sse` подключается без ошибок
+- `npx @modelcontextprotocol/inspector https://mcp.marcus.app/sse` подключается без ошибок
 - `/version` → `{ "sha": "<commit-hash>" }`
 
 ---
@@ -49,11 +49,11 @@ npm create cloudflare@latest markus-mcp-server -- --template=cloudflare/ai/demos
 - Подключить `@cloudflare/workers-oauth-provider`
 - Создать GitHub App с Contents read+write на single repo
 - Whitelist OAuth callback `https://claude.ai/api/mcp/auth_callback`
-- При первом sign-in: `POST /repos/{template}/generate` создаёт приватный `markus-vault` из template repo
+- При первом sign-in: `POST /repos/{template}/generate` создаёт приватный `marcus-vault` из template repo
 
 **Acceptance criteria:**
-- Тестовый юзер из claude.ai добавляет коннектор → через 30–45 сек видит новый приватный репо `markus-vault` в своём github.com аккаунте
-- GitHub token никогда не достигает Claude (проверить: только Markus bearer в Claude headers)
+- Тестовый юзер из claude.ai добавляет коннектор → через 30–45 сек видит новый приватный репо `marcus-vault` в своём github.com аккаунте
+- GitHub token никогда не достигает Claude (проверить: только Marcus bearer в Claude headers)
 
 Детали OAuth цепочки: → `03-mcp-oauth-flow.md`
 
@@ -81,20 +81,20 @@ npm create cloudflare@latest markus-mcp-server -- --template=cloudflare/ai/demos
 - Multi-file commits через GraphQL `createCommitOnBranch` (не N×Contents PUT)
 
 **Acceptance criteria:**
-- Все 9 tools проходят integration тесты против реального тестового `markus-vault` репо
+- Все 9 tools проходят integration тесты против реального тестового `marcus-vault` репо
 - `npx @modelcontextprotocol/inspector` показывает все 9 tools с корректными hints
 
 ---
 
-## P4 — Лендинг markus.app
+## P4 — Лендинг marcus.app
 
 **Что делаем:**
-- 1-экранная страница: что такое Markus + кнопка "Sign in with GitHub"
+- 1-экранная страница: что такое Marcus + кнопка "Sign in with GitHub"
 - GitHub OAuth → установка GitHub App → provisioning vault → экран "Готово, скопируй MCP URL"
-- MCP URL `https://mcp.markus.app/sse` на финальном экране с кнопкой Copy
+- MCP URL `https://mcp.marcus.app/sse` на финальном экране с кнопкой Copy
 
 **Acceptance criteria:**
-- Новый юзер (без аккаунта Markus) проходит весь flow за <60 секунд
+- Новый юзер (без аккаунта Marcus) проходит весь flow за <60 секунд
 - На финальном экране виден рабочий MCP URL, vault репо создан
 
 ---

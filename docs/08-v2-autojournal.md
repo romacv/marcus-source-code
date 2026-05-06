@@ -1,29 +1,21 @@
-# 04. AutoJournal: автоматический дневник жизни (v2 после MVP)
+# 08. AutoJournal: автоматический дневник жизни (v2 после MVP)
+
+> **Не входит в MVP.** Активируется после Q3 2026 launch и iOS app v2. Детали roadmap → [07-roadmap-and-decisions.md](./07-roadmap-and-decisions.md).
 
 ## Что это
 
-После MVP Markus получает iOS приложение с killer feature - **автоматическим сбором дня**. Юзер нажимает кнопку "Собрать день", Markus за 10-30 секунд собирает draft дневниковой записи из:
+После MVP Marcus получает iOS приложение с killer feature - **автоматическим сбором дня**. Юзер нажимает кнопку "Собрать день", Marcus за 10-30 секунд собирает draft дневниковой записи из:
 
 - iCloud Photos (где был, что ел, с кем)
 - Чата с Claude / ChatGPT за день
-- Voice memos и quick notes из Markus app
+- Voice memos и quick notes из Marcus app
 - Calendar и CoreLocation (опционально, opt-in)
 
 Все обрабатывается **on-device через Apple Foundation Models + Vision framework**. В GitHub репо коммитится только текстовое описание дня. Фото и GPS координаты остаются в iCloud, репо хранит только saliency descriptions и asset IDs для deep links.
 
 Утром юзер открывает Claude и спрашивает "что я делал вчера?" - Claude через MCP читает yesterday's entry и делает recap. Юзер правит ошибки прямо в чате.
 
-## Решения зафиксированы
-
-| Вопрос | Решение |
-|---|---|
-| Когда строить | После MVP, в v2 (iOS app) |
-| Триггер генерации | По запросу юзера, не по расписанию |
-| Fallback | Локальное push уведомление вечером "готов собрать твой день?" |
-| Что коммитится в репо | Только текстовые описания |
-| Photo files | Остаются в iCloud, репо хранит только asset IDs и описания |
-| GPS координаты | Не коммитятся, только текстовое описание ("обед в Чангу") |
-| AI processing | On-device Apple Foundation Models, не cloud |
+Решения по AutoJournal (когда строить, триггер, что коммитится, GPS, AI processing) → [07-roadmap-and-decisions.md](./07-roadmap-and-decisions.md) раздел "Feature scope".
 
 ## Конкурентное преимущество
 
@@ -35,7 +27,7 @@
 | Rosebud | Best conversational | Cloud Rosebud | Нет |
 | Limitless / Rewind | Был лучшим | - (Meta acquired дек 2025, hardware killed) | - |
 | Stoic | Limited AI | Cloud | Нет |
-| Markus AutoJournal | On-device + GitHub | **User's GitHub** | **Yes** |
+| Marcus AutoJournal | On-device + GitHub | **User's GitHub** | **Yes** |
 
 Никто не делает связку:
 - автоматический сбор сигналов
@@ -71,8 +63,8 @@
 1. Собирает локальные сигналы (фото, voice, calendar)
 2. Прогоняет через Apple Foundation Models локально
 3. Генерирует markdown text
-4. Шлет готовый markdown через MCP в Markus
-5. Markus коммитит в `10-journal/2026-04-26.md`
+4. Шлет готовый markdown через MCP в Marcus
+5. Marcus коммитит в `10-journal/2026-04-26.md`
 
 Сервер никогда не видит фото, только текст который уже саммаризирован on-device.
 
@@ -94,7 +86,7 @@ Apple App Store Guideline 5.1.2(i) с ноября 2025 требует:
 
 ### Вечерний flow (опциональный)
 
-1. 21:00 локальное время - Markus app шлет local notification "Готов собрать твой день?"
+1. 21:00 локальное время - Marcus app шлет local notification "Готов собрать твой день?"
 2. Юзер тапает - открывается app
 3. Юзер видит preview (фото с обеда, voice memo о встрече)
 4. Жмет "Generate"
@@ -102,7 +94,7 @@ Apple App Store Guideline 5.1.2(i) с ноября 2025 требует:
 6. Видит draft markdown
 7. Может править прямо в app или confirm как есть
 8. Жмет "Save to vault"
-9. Markus коммитит в GitHub
+9. Marcus коммитит в GitHub
 
 ### Утренний flow (recall в Claude)
 
@@ -122,14 +114,14 @@ AutoJournal попадает в Q4 2026 - Q1 2027 release iOS app, после MV
 
 До iOS app в MVP можно добавить minimal version:
 - Webhook endpoint `/api/photos/process` который принимает уже саммаризированный текст из iOS Shortcuts
-- Юзер в iOS Shortcut собирает photos из последнего часа, прогоняет через Foundation Models через Shortcut, шлет результат в Markus webhook
+- Юзер в iOS Shortcut собирает photos из последнего часа, прогоняет через Foundation Models через Shortcut, шлет результат в Marcus webhook
 - Это даст работающий AutoJournal в MVP без нативной app
 
 Но primary push в v2 - native iOS с lockscreen widget и Siri integration.
 
 ## Open questions для v2
 
-1. Stub-creation для людей которых нет в репо: Markus должен сам создавать `30-people/Маша.md` или ждать что юзер сам создаст?
+1. Stub-creation для людей которых нет в репо: Marcus должен сам создавать `30-people/Маша.md` или ждать что юзер сам создаст?
 2. Geo-tags в frontmatter: storing approximate area ("Bali, Чангу") vs не storing вообще
 3. Photo asset IDs: deep link `photos-redirect://asset/ABC123` стабилен через iCloud sync или может сломаться?
 4. Backfill старых фото: позволить юзеру указать "обработай мне последние 30 дней" - это thousands MCP calls, нужен batch endpoint и rate-limiting

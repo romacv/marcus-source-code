@@ -54,4 +54,4 @@ API keys никогда не хранятся в plaintext server-side: encrypt 
 
 > "$10 чтобы $20 AI которые ты уже платишь наконец-то помнили тебя"
 
-Юзер уже платит $20–60/mo за Claude Pro + ChatGPT Plus + Perplexity Pro. Markus не должен feel like another $20 — это слой памяти на существующий стек.
+Юзер уже платит $20–60/mo за Claude Pro + ChatGPT Plus + Perplexity Pro. Marcus не должен feel like another $20 — это слой памяти на существующий стек.

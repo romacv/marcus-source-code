@@ -1,6 +1,6 @@
 import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
-import type { MarkusEnv } from "./index";
+import type { MarcusEnv } from "./index";
 import {
 	homeContent,
 	layout,
@@ -11,7 +11,7 @@ import {
 	renderLoggedOutAuthorizeScreen,
 } from "./utils";
 
-export type Bindings = MarkusEnv & {
+export type Bindings = MarcusEnv & {
 	OAUTH_PROVIDER: OAuthHelpers;
 };
 
@@ -36,11 +36,11 @@ app.get("/authorize", async (c) => {
 
 	const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
 	const oauthScopes = [
-		{ name: "vault:read", description: "Read notes from your Markus vault" },
-		{ name: "vault:write", description: "Create and update notes in your Markus vault" },
+		{ name: "vault:read", description: "Read notes from your Marcus vault" },
+		{ name: "vault:write", description: "Create and update notes in your Marcus vault" },
 	];
 	const content = await renderLoggedOutAuthorizeScreen(oauthScopes, oauthReqInfo);
-	return c.html(layout(content, "Markus - Authorization"));
+	return c.html(layout(content, "Marcus - Authorization"));
 });
 
 // The /authorize page has a form that will POST to /approve
@@ -98,7 +98,7 @@ app.post("/approve", async (c) => {
 });
 
 // P2: GitHub OAuth callback — exchanges code for installation token, stores in KV,
-// then calls OAUTH_PROVIDER.completeAuthorization() with MarkusProps.
+// then calls OAUTH_PROVIDER.completeAuthorization() with MarcusProps.
 // TODO(P2): implement this route.
 app.get("/auth/github/callback", async (c) => {
 	return c.text("GitHub OAuth callback — P2 not yet implemented", 501);

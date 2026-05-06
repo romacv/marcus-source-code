@@ -12,8 +12,8 @@ import {
 	parseFrontmatter,
 } from "./vault";
 
-export type MarkusEnv = Cloudflare.Env & {
-	MARKUS_KV: KVNamespace;
+export type MarcusEnv = Cloudflare.Env & {
+	MARCUS_KV: KVNamespace;
 	GITHUB_CLIENT_ID: string;
 	GITHUB_CLIENT_SECRET: string;
 	GITHUB_APP_ID: string;
@@ -21,7 +21,7 @@ export type MarkusEnv = Cloudflare.Env & {
 	KV_ENCRYPTION_KEY: string;
 };
 
-export type MarkusProps = {
+export type MarcusProps = {
 	userId: string;
 	installationId: string;
 	githubLogin: string;
@@ -37,9 +37,9 @@ const FrontmatterSchema = z.object({
 	status: z.enum(["draft", "published", "archived"]).optional(),
 });
 
-export class MarkusMCP extends McpAgent<MarkusEnv, Record<string, never>, MarkusProps> {
+export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, MarcusProps> {
 	server = new McpServer({
-		name: "Markus",
+		name: "Marcus",
 		version: "0.1.0",
 	});
 
@@ -400,7 +400,7 @@ export class MarkusMCP extends McpAgent<MarkusEnv, Record<string, never>, Markus
 
 export default new OAuthProvider({
 	apiRoute: "/mcp",
-	apiHandler: MarkusMCP.serve("/mcp"),
+	apiHandler: MarcusMCP.serve("/mcp"),
 	defaultHandler: app,
 	authorizeEndpoint: "/authorize",
 	tokenEndpoint: "/token",

@@ -1,3 +1,3 @@
-# Markus - Auto Second Brain
+# Marcus - Auto Second Brain
 
 **Docs →** [docs/MVP-PROTOTYPE-PLAN.md](./docs/MVP-PROTOTYPE-PLAN.md)

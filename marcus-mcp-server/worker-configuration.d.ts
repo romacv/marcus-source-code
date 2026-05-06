@@ -2,8 +2,8 @@
 declare namespace Cloudflare {
 	interface Env {
 		OAUTH_KV: KVNamespace;
-		MARKUS_KV: KVNamespace;
-		MCP_OBJECT: DurableObjectNamespace<import("./src/index").MarkusMCP>;
+		MARCUS_KV: KVNamespace;
+		MCP_OBJECT: DurableObjectNamespace<import("./src/index").MarcusMCP>;
 		ASSETS: Fetcher;
 	}
 }
