@@ -1,111 +1,73 @@
-# Remote MCP Server on Cloudflare
+# Marcus - Auto Second Brain
 
-Let's get a remote MCP server up-and-running on Cloudflare Workers complete with OAuth login!
+Marcus remembers everything you discuss with Claude, ChatGPT, and Perplexity — and stores it as private markdown notes in your own GitHub repository.
 
-## Develop locally
+> Your notes live in **your** GitHub repo. Even if Marcus shuts down tomorrow, your data stays with you.
 
-```bash
-# clone the repository
-git clone git@github.com:cloudflare/ai.git
+---
 
-# install dependencies
-cd ai
-npm install
+## How to connect Marcus to Claude
 
-# run locally
-npx nx dev remote-mcp-server
+### Step 1. Open Connectors settings
+
+Go to [claude.ai/settings/connectors](https://claude.ai/settings/connectors) and click **"Add custom connector"**.
+
+### Step 2. Enter the Marcus URL
+
+In the URL field, paste:
+
+```
+https://marcus-mcp-server.r-df5.workers.dev/mcp
 ```
 
-You should be able to open [`http://localhost:8787/`](http://localhost:8787/) in your browser
-
-## Connect the MCP inspector to your server
-
-To explore your new MCP api, you can use the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector).
-
-- Start it with `npx @modelcontextprotocol/inspector`
-- [Within the inspector](http://localhost:5173), switch the Transport Type to `SSE` and enter `http://localhost:8787/sse` as the URL of the MCP server to connect to, and click "Connect"
-- You will navigate to a (mock) user/password login screen. Input any email and pass to login.
-- You should be redirected back to the MCP Inspector and you can now list and call any defined tools!
+Give it a name (e.g. **Marcus Auto Second Brain**) and click **Add**.
 
 <div align="center">
-  <img src="img/mcp-inspector-sse-config.png" alt="MCP Inspector with the above config" width="600"/>
+  <img src="img/add-connector.png" alt="Add custom connector dialog in Claude with Marcus URL" width="560"/>
 </div>
 
-<div align="center">
-  <img src="img/mcp-inspector-successful-tool-call.png" alt="MCP Inspector with after a tool call" width="600"/>
-</div>
+### Step 3. Authorize with GitHub
 
-## Connect Claude Desktop to your local MCP server
+A popup will open asking you to sign in with GitHub. Marcus will create a private `marcus-vault` repository in your account and install itself with read/write access to that repo only.
 
-The MCP inspector is great, but we really want to connect this to Claude! Follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config to find your configuration file.
+### Step 4. Start using Marcus in chat
 
-Open the file in your text editor and replace it with this configuration:
+1. Open a new chat in Claude
+2. Click **+** in the bottom-left of the input field
+3. Select **Connectors** and enable Marcus
+4. Ask Claude to save something: *"Save this to my second brain"*
 
-```json
-{
-	"mcpServers": {
-		"math": {
-			"command": "npx",
-			"args": ["mcp-remote", "http://localhost:8787/sse"]
-		}
-	}
-}
-```
+After adding on desktop, the connector automatically appears in the **Claude iPhone/Android app** too. Restart the app if it doesn't appear immediately.
 
-This will run a local proxy and let Claude talk to your MCP server over HTTP
+---
 
-When you open Claude a browser window should open and allow you to login. You should see the tools available in the bottom right. Given the right prompt Claude should ask to call the tool.
+## What Marcus can do
 
-<div align="center">
-  <img src="img/available-tools.png" alt="Clicking on the hammer icon shows a list of available tools" width="600"/>
-</div>
+| Tool | What it does |
+|---|---|
+| `create_note` | Save a new note to your vault |
+| `update_note` | Edit an existing note (replace, append, or prepend) |
+| `get_note` | Read a specific note |
+| `search_notes` | Search across all your notes |
+| `list_structure` | See your vault folder structure |
+| `append_to_daily_note` | Add an entry to today's daily note |
+| `link_notes` | Connect two notes with a wikilink |
+| `get_recent_notes` | Get your most recently updated notes |
+| `delete_note` | Archive or permanently delete a note |
 
-<div align="center">
-  <img src="img/claude-does-math-the-fancy-way.png" alt="Claude answers the prompt 'I seem to have lost my calculator and have run out of fingers. Could you use the math tool to add 23 and 19?' by invoking the MCP add tool" width="600"/>
-</div>
+---
 
-## Deploy to Cloudflare
+## Privacy
 
-1. `npx wrangler@latest kv namespace create remote-mcp-server-oauth-kv`
-2. Follow the guidance to add the kv namespace ID to `wrangler.jsonc`
-3. `npm run deploy`
+Marcus is **contentless by design**. Your note content never passes through or is stored on Marcus servers. Marcus only stores:
 
-## Call your newly deployed remote MCP server from a remote MCP client
+- A mapping from your Marcus user ID to your GitHub App installation ID
+- Short-lived OAuth tokens (TTL 24h)
 
-Just like you did above in "Develop locally", run the MCP inspector:
+All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens. The server is [MIT-licensed and open source](https://github.com/romacv/marcus-second-brain).
 
-`npx @modelcontextprotocol/inspector@latest`
+---
 
-Then enter the `workers.dev` URL (ex: `worker-name.account-name.workers.dev/sse`) of your Worker in the inspector as the URL of the MCP server to connect to, and click "Connect".
+## Disconnect
 
-You've now connected to your MCP server from a remote MCP client.
-
-## Connect Claude Desktop to your remote MCP server
-
-Update the Claude configuration file to point to your `workers.dev` URL (ex: `worker-name.account-name.workers.dev/sse`) and restart Claude
-
-```json
-{
-	"mcpServers": {
-		"math": {
-			"command": "npx",
-			"args": ["mcp-remote", "https://worker-name.account-name.workers.dev/sse"]
-		}
-	}
-}
-```
-
-## Debugging
-
-Should anything go wrong it can be helpful to restart Claude, or to try connecting directly to your
-MCP server on the command line with the following command.
-
-```bash
-npx mcp-remote http://localhost:8787/sse
-```
-
-In some rare cases it may help to clear the files added to `~/.mcp-auth`
-
-```bash
-rm -rf ~/.mcp-auth
-```
+To revoke Marcus access: go to [github.com/settings/installations](https://github.com/settings/installations), find Marcus, and click **Uninstall**. Your vault repo and all notes remain in your GitHub account.
