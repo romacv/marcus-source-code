@@ -30,6 +30,32 @@ type TreeEntry = {
 	type: "blob" | "tree";
 };
 
+// Wraps PKCS#1 RSA key DER in a PKCS#8 PrivateKeyInfo structure.
+// GitHub App private keys are PKCS#1 (BEGIN RSA PRIVATE KEY),
+// but Web Crypto importKey("pkcs8") requires PKCS#8 (BEGIN PRIVATE KEY).
+function pkcs1ToPkcs8(pkcs1: Uint8Array): Uint8Array {
+	const encLen = (n: number): Uint8Array =>
+		n < 128 ? new Uint8Array([n]) : n < 256 ? new Uint8Array([0x81, n]) : new Uint8Array([0x82, (n >> 8) & 0xff, n & 0xff]);
+
+	// SEQUENCE { OID rsaEncryption, NULL }
+	const algoId = new Uint8Array([0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00]);
+	const version = new Uint8Array([0x02, 0x01, 0x00]);
+	const octetLen = encLen(pkcs1.length);
+	const octetString = new Uint8Array([0x04, ...octetLen, ...pkcs1]);
+
+	const body = new Uint8Array(version.length + algoId.length + octetString.length);
+	body.set(version, 0);
+	body.set(algoId, version.length);
+	body.set(octetString, version.length + algoId.length);
+
+	const bodyLen = encLen(body.length);
+	const result = new Uint8Array(1 + bodyLen.length + body.length);
+	result[0] = 0x30;
+	result.set(bodyLen, 1);
+	result.set(body, 1 + bodyLen.length);
+	return result;
+}
+
 // Signs a JWT for GitHub App authentication.
 async function signAppJwt(appId: string, privateKeyPem: string): Promise<string> {
 	const now = Math.floor(Date.now() / 1000);
@@ -41,9 +67,13 @@ async function signAppJwt(appId: string, privateKeyPem: string): Promise<string>
 
 	const signingInput = `${enc(header)}.${enc(payload)}`;
 
-	// Import RSA private key
+	// GitHub App private keys are PKCS#1 (BEGIN RSA PRIVATE KEY).
+	// Web Crypto requires PKCS#8, so we convert.
 	const pemBody = privateKeyPem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
-	const keyData = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+	const rawDer = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+	const isPkcs8 = privateKeyPem.includes("BEGIN PRIVATE KEY");
+	const keyData = isPkcs8 ? rawDer : pkcs1ToPkcs8(rawDer);
+
 	const key = await crypto.subtle.importKey(
 		"pkcs8",
 		keyData,

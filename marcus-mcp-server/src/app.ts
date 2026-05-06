@@ -166,11 +166,15 @@ app.get("/vault/setup", (c) => {
 				<li>Click <strong style="color:var(--text)">Create repository</strong> on GitHub</li>
 				<li>Come back here and click <strong style="color:var(--text)">Continue</strong></li>
 			</ol>
-			<div style="display:flex;gap:1rem;flex-wrap:wrap">
+			<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:3rem">
 				<a href="${githubNewRepoUrl}" target="_blank" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none">Create Repository on GitHub ↗</a>
 				<a href="${installUrl}" style="display:inline-block;padding:.75rem 1.5rem;border:1px solid var(--hair);color:var(--text);border-radius:6px;text-decoration:none">I created it, continue →</a>
 			</div>
-			<p style="color:var(--subtle);font-size:.8rem;margin-top:1.5rem">Repo will be: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
+			<p style="color:var(--subtle);font-size:.8rem;margin-bottom:3rem">Repo will be: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
+			<hr style="border:0;height:1px;background:var(--hair);margin-bottom:3rem">
+			<h2 style="font-family:var(--f-display);font-size:var(--tx-xl);font-weight:600;margin-bottom:.75rem">After clicking "I created it, continue →"</h2>
+			<p style="color:var(--muted);margin-bottom:1.5rem">GitHub will ask you to authorize Marcus. Select <strong style="color:var(--text)">Only select repositories</strong>, choose <strong style="color:var(--text)">${VAULT_REPO_NAME}</strong> from the dropdown, then click <strong style="color:var(--text)">Install &amp; Authorize</strong>.</p>
+			<img src="/img/install-authorize.png" alt="GitHub Install & Authorize screen" style="width:100%;max-width:480px;border-radius:12px;border:1px solid var(--hair)">
 		</div>`,
 	);
 	return c.html(layout(content, "Marcus — Create your vault"));
