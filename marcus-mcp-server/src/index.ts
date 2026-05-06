@@ -17,6 +17,7 @@ export type MarcusEnv = Cloudflare.Env & {
 	GITHUB_CLIENT_ID: string;
 	GITHUB_CLIENT_SECRET: string;
 	GITHUB_APP_ID: string;
+	GITHUB_APP_SLUG: string;
 	GITHUB_APP_PRIVATE_KEY: string;
 	KV_ENCRYPTION_KEY: string;
 };
