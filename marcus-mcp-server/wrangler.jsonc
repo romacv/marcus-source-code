@@ -26,12 +26,12 @@
 		{
 			// Created via: wrangler kv namespace create OAUTH_KV
 			"binding": "OAUTH_KV",
-			"id": "<OAUTH_KV_NAMESPACE_ID>"
+			"id": "3bad768903b84b6f90126007aec1c300"
 		},
 		{
 			// Created via: wrangler kv namespace create MARCUS_KV
 			"binding": "MARCUS_KV",
-			"id": "<MARCUS_KV_NAMESPACE_ID>"
+			"id": "e23144513e334331956d255c6bc766a4"
 		}
 	],
 	// Secrets set via: wrangler secret put GITHUB_CLIENT_ID, etc.
