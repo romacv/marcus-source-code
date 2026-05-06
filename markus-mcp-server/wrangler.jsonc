@@ -1,0 +1,44 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "markus-mcp-server",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-03-29",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"migrations": [
+		{
+			"new_sqlite_classes": ["MarkusMCP"],
+			"tag": "v1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "MarkusMCP",
+				"name": "MCP_OBJECT"
+			}
+		]
+	},
+	"kv_namespaces": [
+		{
+			// Created via: wrangler kv namespace create OAUTH_KV
+			"binding": "OAUTH_KV",
+			"id": "<OAUTH_KV_NAMESPACE_ID>"
+		},
+		{
+			// Created via: wrangler kv namespace create MARKUS_KV
+			"binding": "MARKUS_KV",
+			"id": "<MARKUS_KV_NAMESPACE_ID>"
+		}
+	],
+	// Secrets set via: wrangler secret put GITHUB_CLIENT_ID, etc.
+	// Required: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_APP_ID,
+	//           GITHUB_APP_PRIVATE_KEY, KV_ENCRYPTION_KEY
+	"observability": {
+		"enabled": true
+	},
+	"assets": { "directory": "./static/", "binding": "ASSETS" }
+}
