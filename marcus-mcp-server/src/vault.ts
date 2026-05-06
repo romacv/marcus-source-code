@@ -1,8 +1,29 @@
 export const VAULT_REPO_NAME = "marcus-second-brain-vault";
 
+export const MEMORY_CATEGORIES = [
+	"hardware",
+	"finance",
+	"health",
+	"work",
+	"travel",
+	"personal",
+	"decisions",
+] as const;
+
+export type MemoryCategory = (typeof MEMORY_CATEGORIES)[number];
+
+function titleCase(value: string): string {
+	return value.slice(0, 1).toUpperCase() + value.slice(1);
+}
+
 export const VAULT_SEED_FILES: Array<{ path: string; content: string }> = [
 	{ path: "00-daily/.gitkeep", content: "" },
 	{ path: "10-journal/.gitkeep", content: "" },
+	...MEMORY_CATEGORIES.map((category) => ({
+		path: memoryPath(category),
+		content: `# ${titleCase(category)}\n\n`,
+	})),
+	{ path: memoryArchivePath(), content: "# Memory Archive\n\n" },
 	{ path: "20-topics/.gitkeep", content: "" },
 	{ path: "30-people/.gitkeep", content: "" },
 	{ path: "40-projects/.gitkeep", content: "" },
@@ -147,6 +168,14 @@ export function dailyNotePath(date: Date): string {
 	const m = String(date.getUTCMonth() + 1).padStart(2, "0");
 	const d = String(date.getUTCDate()).padStart(2, "0");
 	return `00-daily/${y}/${m}/${y}-${m}-${d}.md`;
+}
+
+export function memoryPath(category: MemoryCategory): string {
+	return `15-memory/${category}.md`;
+}
+
+export function memoryArchivePath(): string {
+	return "15-memory/_archive.md";
 }
 
 // Moves a vault path into the 90-archive/ folder.

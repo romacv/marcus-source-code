@@ -1,7 +1,5 @@
-import { env } from "cloudflare:workers";
-import { html, raw } from "hono/html";
+import { html } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
-import { marked } from "marked";
 
 export const layout = (content: HtmlEscapedString | string, title: string) => html`
 	<!DOCTYPE html>
@@ -177,6 +175,227 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					from { opacity: 0; transform: translateY(12px); }
 					to   { opacity: 1; transform: none; }
 				}
+
+				/* ── Landing page ──────────────────────────────────────── */
+				.hero {
+					display: grid;
+					gap: clamp(2rem,4vw,4rem);
+					padding-block: clamp(3rem,6vw,6rem);
+					align-items: center;
+				}
+				@media (min-width: 880px) {
+					.hero { grid-template-columns: 1fr 1.1fr; }
+				}
+				.hero h1 {
+					font-family: var(--f-display);
+					font-size: var(--tx-3xl);
+					font-weight: 800;
+					letter-spacing: -.03em;
+					line-height: .98;
+					margin-bottom: 1.25rem;
+					animation: reveal .7s var(--ease) both;
+				}
+				.hero .lede {
+					font-family: var(--f-body);
+					font-size: var(--tx-lg);
+					font-style: italic;
+					color: var(--muted);
+					line-height: 1.65;
+					margin-bottom: 2rem;
+					animation: reveal .7s var(--ease) 80ms both;
+				}
+				.hero__art {
+					width: 100%;
+					border-radius: 8px;
+					border: 1px solid var(--hair);
+					animation: reveal .9s var(--ease) 120ms both;
+				}
+				.cta {
+					display: flex;
+					flex-wrap: wrap;
+					gap: .75rem;
+					animation: reveal .7s var(--ease) 160ms both;
+				}
+				.cta--primary {
+					background: var(--accent);
+					color: #0e0c0b;
+					padding: .85rem 1.4rem;
+					border-radius: 6px;
+					font-family: var(--f-display);
+					font-weight: 600;
+					font-size: var(--tx-sm);
+					letter-spacing: .01em;
+					text-decoration: none;
+					transition: opacity 150ms ease;
+				}
+				.cta--primary:hover { opacity: .88; }
+				.cta--secondary {
+					color: var(--text);
+					padding: .85rem 1.1rem;
+					border: 1px solid var(--hair);
+					border-radius: 6px;
+					font-family: var(--f-display);
+					font-weight: 500;
+					font-size: var(--tx-sm);
+					text-decoration: none;
+					transition: border-color 150ms ease;
+				}
+				.cta--secondary:hover { border-color: rgba(237,232,223,.22); }
+
+				.section {
+					padding-block: clamp(3rem,5vw,5rem);
+					border-top: 1px solid var(--hair);
+				}
+				.section__eyebrow {
+					font-family: var(--f-mono);
+					font-size: var(--tx-xs);
+					letter-spacing: .1em;
+					text-transform: uppercase;
+					color: var(--accent);
+					margin-bottom: .875rem;
+				}
+				.section h2 {
+					font-family: var(--f-display);
+					font-size: var(--tx-2xl);
+					font-weight: 700;
+					letter-spacing: -.02em;
+					line-height: 1.1;
+					margin-bottom: 1.5rem;
+				}
+				.section p {
+					color: var(--muted);
+					line-height: 1.78;
+					max-width: 640px;
+					margin-bottom: 1.125rem;
+				}
+				.section__img {
+					width: 100%;
+					max-width: 840px;
+					border-radius: 8px;
+					border: 1px solid var(--hair);
+					margin-block: 2rem;
+					display: block;
+				}
+				.section__img--center { margin-inline: auto; }
+
+				.steps-row {
+					display: grid;
+					gap: 1.5rem;
+					margin-block: 2rem;
+				}
+				@media (min-width: 680px) {
+					.steps-row { grid-template-columns: repeat(3, 1fr); }
+				}
+				.step {
+					background: var(--surface);
+					border: 1px solid var(--hair);
+					border-radius: 6px;
+					padding: 1.5rem;
+				}
+				.step__num {
+					font-family: var(--f-mono);
+					font-size: var(--tx-xs);
+					letter-spacing: .1em;
+					color: var(--subtle);
+					display: block;
+					margin-bottom: .75rem;
+				}
+				.step h3 {
+					font-family: var(--f-display);
+					font-size: var(--tx-lg);
+					font-weight: 700;
+					letter-spacing: -.01em;
+					margin-bottom: .5rem;
+				}
+				.step p {
+					max-width: none;
+					font-size: var(--tx-sm);
+					margin-bottom: 0;
+				}
+
+				.connect-steps {
+					padding-left: 0;
+					list-style: none;
+					counter-reset: steps;
+					display: grid;
+					gap: 1.25rem;
+					margin-block: 2rem;
+					max-width: 640px;
+				}
+				.connect-steps li {
+					counter-increment: steps;
+					position: relative;
+					padding-left: 2.625rem;
+					color: var(--muted);
+					line-height: 1.7;
+				}
+				.connect-steps li::before {
+					content: counter(steps);
+					font-family: var(--f-mono);
+					font-size: var(--tx-xs);
+					color: var(--accent);
+					background: var(--accent-d);
+					border-radius: 50%;
+					width: 1.75rem;
+					height: 1.75rem;
+					position: absolute;
+					left: 0;
+					top: .2rem;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+				}
+				.connect-steps a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+				.connect-steps code {
+					font-family: var(--f-mono);
+					font-size: .8rem;
+					color: var(--accent);
+					background: var(--accent-d);
+					padding: .15em .45em;
+					border-radius: 3px;
+				}
+
+				.tools-table {
+					width: 100%;
+					border-collapse: collapse;
+					margin-block: 1.75rem;
+					font-size: var(--tx-sm);
+				}
+				.tools-table th {
+					font-family: var(--f-mono);
+					font-size: var(--tx-xs);
+					letter-spacing: .09em;
+					text-transform: uppercase;
+					font-weight: 500;
+					color: var(--subtle);
+					padding: .625rem .875rem;
+					border-bottom: 1px solid rgba(237,232,223,.12);
+					text-align: left;
+				}
+				.tools-table td {
+					padding: .625rem .875rem;
+					border-bottom: 1px solid var(--hair);
+					color: var(--muted);
+					vertical-align: top;
+				}
+				.tools-table td:first-child {
+					font-family: var(--f-mono);
+					font-size: .8rem;
+					color: var(--accent);
+					white-space: nowrap;
+				}
+
+				.privacy-block {
+					background: var(--surface);
+					border: 1px solid var(--hair);
+					border-radius: 8px;
+					padding: 1.75rem 2rem;
+					max-width: 640px;
+					margin-block: 1.5rem;
+				}
+				.privacy-block p { margin-bottom: .875rem; }
+				.privacy-block p:last-child { margin-bottom: 0; }
+				.privacy-block a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
 				/* ── Prose (markdown) ───────────────────────────────────── */
 				.prose {
@@ -373,10 +592,89 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 	</html>
 `;
 
-export const homeContent = async (req: Request): Promise<HtmlEscapedString> => {
-	const origin = new URL(req.url).origin;
-	const res = await env.ASSETS.fetch(`${origin}/README.md`);
-	const markdown = await res.text();
-	const content = await marked(markdown);
-	return html`<div class="prose">${raw(content)}</div>`;
-};
+export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => html`
+	<section class="hero">
+		<div class="hero__copy">
+			<h1>Automatic second brain</h1>
+			<p class="lede">Conversations with Claude, ChatGPT, and Perplexity become structured markdown memory in your own GitHub repo.</p>
+			<div class="cta">
+				<a class="cta--primary" href="#connect">Connect Marcus →</a>
+				<a class="cta--secondary" href="#how">How it works</a>
+			</div>
+		</div>
+		<img class="hero__art" src="/img/hero-flow.png" alt="Claude, ChatGPT, and Perplexity conversations flowing through Marcus into a GitHub repo" />
+	</section>
+
+	<section id="how" class="section">
+		<p class="section__eyebrow">How it works</p>
+		<h2>Three steps, fully automatic</h2>
+		<div class="steps-row">
+			<div class="step">
+				<span class="step__num">01</span>
+				<h3>Capture</h3>
+				<p>Every conversation you have with Claude, ChatGPT, or Perplexity is a source. Marcus listens for meaningful exchanges.</p>
+			</div>
+			<div class="step">
+				<span class="step__num">02</span>
+				<h3>Extract</h3>
+				<p>Marcus identifies topics, decisions, and context — structuring raw conversation into linked markdown notes.</p>
+			</div>
+			<div class="step">
+				<span class="step__num">03</span>
+				<h3>Write to GitHub</h3>
+				<p>Notes land directly in your private GitHub repo via short-lived installation tokens. Marcus never stores your content.</p>
+			</div>
+		</div>
+		<img class="section__img section__img--center" src="/img/network-graph.png" alt="Visual network of linked notes, projects, people, and decisions" />
+	</section>
+
+	<section class="section">
+		<p class="section__eyebrow">Memory</p>
+		<h2>Grows with every conversation</h2>
+		<p>Each note Marcus writes is linked to related notes — people, projects, decisions, research. Over time your vault becomes a searchable second brain that any AI can read and reason over.</p>
+		<p>Because notes live as plain markdown in your GitHub repo, you own them forever. Export, search, or build on them with any tool.</p>
+	</section>
+
+	<section id="connect" class="section">
+		<p class="section__eyebrow">Get started</p>
+		<h2>Connect in 4 steps</h2>
+		<ol class="connect-steps">
+			<li>Go to <a href="https://claude.ai/settings/connectors">claude.ai/settings/connectors</a> and click <strong>Add custom connector</strong>.</li>
+			<li>Paste <code>https://marcus-mcp-server.r-df5.workers.dev/mcp</code> in the URL field, name it <strong>Marcus Auto Second Brain</strong>, and click Add.</li>
+			<li>Sign in with GitHub. Marcus creates a private <code>marcus-vault</code> repo in your account and requests access to that repo only.</li>
+			<li>Open a new Claude chat, click <strong>+</strong> → Connectors → enable Marcus. Ask Claude: <em>"Save this to my second brain."</em></li>
+		</ol>
+		<img class="section__img section__img--center" src="/img/add-connector.png" alt="Add custom connector dialog in Claude with Marcus URL" />
+	</section>
+
+	<section class="section">
+		<p class="section__eyebrow">Tools</p>
+		<h2>What Marcus can do</h2>
+		<table class="tools-table">
+			<thead>
+				<tr><th>Tool</th><th>What it does</th></tr>
+			</thead>
+			<tbody>
+				<tr><td>create_note</td><td>Save a new note to your vault</td></tr>
+				<tr><td>update_note</td><td>Edit an existing note (replace, append, or prepend)</td></tr>
+				<tr><td>get_note</td><td>Read a specific note</td></tr>
+				<tr><td>search_notes</td><td>Search across all your notes</td></tr>
+				<tr><td>list_structure</td><td>See your vault folder structure</td></tr>
+				<tr><td>append_to_daily_note</td><td>Add an entry to today's daily note</td></tr>
+				<tr><td>link_notes</td><td>Connect two notes with a wikilink</td></tr>
+				<tr><td>get_recent_notes</td><td>Get your most recently updated notes</td></tr>
+				<tr><td>delete_note</td><td>Archive or permanently delete a note</td></tr>
+			</tbody>
+		</table>
+	</section>
+
+	<section class="section">
+		<p class="section__eyebrow">Privacy &amp; Open Source</p>
+		<h2>Your data, your repo</h2>
+		<div class="privacy-block">
+			<p>Marcus is contentless by design. Your note content never passes through or is stored on Marcus servers. Marcus only stores a mapping from your Marcus user ID to your GitHub App installation ID, and short-lived OAuth tokens (TTL 24h).</p>
+			<p>All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens. The server is <a href="https://github.com/romacv/marcus-second-brain">MIT-licensed and open source</a>.</p>
+			<p>To revoke access: go to <a href="https://github.com/settings/installations">github.com/settings/installations</a>, find Marcus, and click Uninstall. Your vault repo and all notes stay in your GitHub account.</p>
+		</div>
+	</section>
+`;

@@ -1,5 +1,6 @@
+import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
+
 const GITHUB_API = "https://api.github.com";
-export const VAULT_REPO_NAME = "marcus-second-brain-vault";
 
 type OAuthEnv = {
 	GITHUB_CLIENT_ID: string;
@@ -7,24 +8,6 @@ type OAuthEnv = {
 	GITHUB_APP_ID: string;
 	GITHUB_APP_SLUG: string;
 };
-
-// Vault seed files committed on first provisioning.
-const VAULT_SEED_FILES: Array<{ path: string; content: string }> = [
-	{ path: "00-daily/.gitkeep", content: "" },
-	{ path: "10-journal/.gitkeep", content: "" },
-	{ path: "20-topics/.gitkeep", content: "" },
-	{ path: "30-people/.gitkeep", content: "" },
-	{ path: "40-projects/.gitkeep", content: "" },
-	{ path: "50-resources/.gitkeep", content: "" },
-	{ path: "60-photos/.gitkeep", content: "" },
-	{ path: "90-archive/.gitkeep", content: "" },
-	{ path: "_marcus/version.txt", content: "1" },
-	{
-		path: "index.md",
-		content:
-			"# Marcus Vault\n\nYour personal second brain. Managed by [Marcus](https://marcus-mcp-server.r-df5.workers.dev).\n",
-	},
-];
 
 function githubHeaders(token: string): HeadersInit {
 	return {

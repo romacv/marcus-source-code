@@ -5,10 +5,22 @@ import { z } from "zod";
 import app from "./app";
 import { GitHubClient } from "./github";
 import {
+	formatMemoryLine,
+	generateBlockId,
+	isExpired,
+	normalizeBlockId,
+	parseMemoryLine,
+	type ParsedMemoryLine,
+} from "./memory";
+import {
 	archivePath,
 	buildFrontmatter,
 	dailyNotePath,
 	generateUlid,
+	MEMORY_CATEGORIES,
+	type MemoryCategory,
+	memoryArchivePath,
+	memoryPath,
 	parseFrontmatter,
 } from "./vault";
 
@@ -37,6 +49,68 @@ const FrontmatterSchema = z.object({
 	people: z.array(z.string()).optional(),
 	status: z.enum(["draft", "published", "archived"]).optional(),
 });
+
+type GitHubFile = Awaited<ReturnType<GitHubClient["getFile"]>>;
+
+type MemoryRecord = ParsedMemoryLine & {
+	category: MemoryCategory;
+	path: string;
+	line: string;
+};
+
+const MemoryCategorySchema = z.enum(MEMORY_CATEGORIES);
+const BLOCK_ID_QUERY_RE = /^\^?id-[a-z0-9]+$/i;
+
+function todayIsoDate(now = new Date()): string {
+	return now.toISOString().slice(0, 10);
+}
+
+function titleCase(value: string): string {
+	return value.slice(0, 1).toUpperCase() + value.slice(1);
+}
+
+function initialMemoryFile(category: MemoryCategory): string {
+	return `# ${titleCase(category)}\n\n`;
+}
+
+function initialDailyNote(now: Date): string {
+	const ts = now.toISOString();
+	const dateStr = ts.slice(0, 10);
+	return `${buildFrontmatter({ id: generateUlid(), created: ts, updated: ts, source: "chat", tags: ["daily"] })}\n\n# ${dateStr}\n`;
+}
+
+function appendMarkdownLine(content: string, line: string): string {
+	return `${content.trimEnd()}\n\n${line}\n`;
+}
+
+function excerpt(content: string, max = 60): string {
+	const compact = content.trim().replace(/\s+/g, " ");
+	return compact.length <= max ? compact : `${compact.slice(0, max - 3)}...`;
+}
+
+function obsidianAlias(value: string): string {
+	return value.replace(/[\]|]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function categoryFromPath(path: string): MemoryCategory | null {
+	const match = path.match(/^15-memory\/([^/]+)\.md$/);
+	if (!match) return null;
+	const category = match[1];
+	return MEMORY_CATEGORIES.includes(category as MemoryCategory)
+		? (category as MemoryCategory)
+		: null;
+}
+
+function memoryRecordsFromFile(category: MemoryCategory, content: string): MemoryRecord[] {
+	const path = memoryPath(category);
+	return content
+		.split("\n")
+		.map((line) => {
+			const parsed = parseMemoryLine(line);
+			return parsed ? { ...parsed, category, path, line } : null;
+		})
+		.filter((entry): entry is MemoryRecord => Boolean(entry));
+}
 
 export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, MarcusProps> {
 	server = new McpServer({
@@ -76,6 +150,71 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 			for (const [k, v] of Object.entries(opts.extras)) lines.push(`${k}: ${v}`);
 		}
 		return lines.join("\n");
+	}
+
+	private async getFileOrNull(path: string): Promise<GitHubFile | null> {
+		return this.github.getFile(path).catch((e: unknown) => {
+			if (!/→ 404:/.test(String(e))) throw e;
+			return null;
+		});
+	}
+
+	private async commitWithHeadRetry(
+		message: string,
+		filesBuilder: () => Promise<Array<{ path: string; content: string }>>,
+	): Promise<string> {
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const files = await filesBuilder();
+			try {
+				return await this.github.createCommitOnBranch("main", message, files);
+			} catch (e: unknown) {
+				if (attempt === 0 && /HEAD_REF_OUTDATED|expectedHeadOid|409/i.test(String(e))) continue;
+				throw e;
+			}
+		}
+		throw new Error("commit retry exhausted");
+	}
+
+	private async getMemoryFile(category: MemoryCategory): Promise<GitHubFile | null> {
+		return this.getFileOrNull(memoryPath(category));
+	}
+
+	private async readMemoryRecords(categories: readonly MemoryCategory[]): Promise<MemoryRecord[]> {
+		const files = await Promise.all(
+			categories.map(async (category) => ({ category, file: await this.getMemoryFile(category) })),
+		);
+		return files.flatMap(({ category, file }) =>
+			file ? memoryRecordsFromFile(category, file.content) : [],
+		);
+	}
+
+	private async findMemoryByQuery(
+		query: string,
+	): Promise<{ category: MemoryCategory; file: GitHubFile; line: string; parsed: ParsedMemoryLine } | null> {
+		const normalizedQuery = normalizeBlockId(query).toLowerCase();
+		let categories: MemoryCategory[] = [...MEMORY_CATEGORIES];
+
+		if (!BLOCK_ID_QUERY_RE.test(query)) {
+			const results = await this.github.searchCode(query, { folder: "15-memory", limit: 50 });
+			const resultCategories = results
+				.map((result) => categoryFromPath(result.path))
+				.filter((category): category is MemoryCategory => Boolean(category));
+			if (resultCategories.length > 0) categories = [...new Set(resultCategories)];
+		}
+
+		for (const category of categories) {
+			const file = await this.getMemoryFile(category);
+			if (!file) continue;
+			for (const line of file.content.split("\n")) {
+				const parsed = parseMemoryLine(line);
+				if (!parsed || parsed.archived) continue;
+				const matchesId = parsed.blockId.toLowerCase() === normalizedQuery;
+				const matchesText = parsed.content.toLowerCase().includes(query.toLowerCase());
+				if (matchesId || matchesText) return { category, file, line, parsed };
+			}
+		}
+
+		return null;
 	}
 
 	async init() {
@@ -339,6 +478,240 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({ path, sha }) }],
+				};
+			},
+		);
+
+		this.server.registerTool(
+			"remember",
+			{
+				description:
+					"Store a durable memory in the GitHub vault and link it from today's daily note.",
+				inputSchema: {
+					content: z.string().min(1).describe("Memory text to store"),
+					category: MemoryCategorySchema.describe("Memory category"),
+					date: z
+						.string()
+						.regex(/^\d{4}-\d{2}-\d{2}$/)
+						.optional()
+						.describe("Optional memory date in YYYY-MM-DD format"),
+					ttl: z
+						.number()
+						.int()
+						.min(1)
+						.optional()
+						.describe("Optional time-to-live in days; expired memories are hidden by recall"),
+				},
+				annotations: { destructiveHint: false },
+			},
+			async ({ content, category, date, ttl }) => {
+				const now = new Date();
+				const blockId = generateBlockId();
+				const memoryDate = date ?? todayIsoDate(now);
+				const memoryLine = formatMemoryLine({
+					date: memoryDate,
+					content,
+					blockId,
+					ttlDays: ttl,
+				});
+				const memoryFilePath = memoryPath(category);
+				const dailyPath = dailyNotePath(now);
+				const dailyLine = `- memory: [[15-memory/${category}#^${blockId}|${obsidianAlias(excerpt(content))}]]`;
+				const msg = this.buildCommit({
+					title: `remember ${category}`,
+					tool: "remember",
+					extras: { Category: category, "Block-Id": blockId },
+				});
+
+				const sha = await this.commitWithHeadRetry(msg, async () => {
+					const [memoryFile, dailyFile] = await Promise.all([
+						this.getMemoryFile(category),
+						this.getFileOrNull(dailyPath),
+					]);
+					return [
+						{
+							path: memoryFilePath,
+							content: appendMarkdownLine(
+								memoryFile?.content ?? initialMemoryFile(category),
+								memoryLine,
+							),
+						},
+						{
+							path: dailyPath,
+							content: appendMarkdownLine(dailyFile?.content ?? initialDailyNote(now), dailyLine),
+						},
+					];
+				});
+
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: JSON.stringify({
+								path: memoryFilePath,
+								daily_path: dailyPath,
+								block_id: blockId,
+								sha,
+							}),
+						},
+					],
+				};
+			},
+		);
+
+		this.server.registerTool(
+			"forget",
+			{
+				description:
+					"Archive a memory by block id or text query. The source line is struck through and linked from 15-memory/_archive.md.",
+				inputSchema: {
+					query: z.string().min(1).describe("Block id like id-a1b2c3 or text to forget"),
+				},
+				annotations: { destructiveHint: true },
+			},
+			async ({ query }) => {
+				const found = await this.findMemoryByQuery(query);
+				if (!found) {
+					return {
+						content: [{ type: "text" as const, text: JSON.stringify({ error: "not_found" }) }],
+						isError: true,
+					};
+				}
+
+				const archivedDate = todayIsoDate();
+				const archiveLine = `- [${archivedDate} archived] [[${found.category}#^${found.parsed.blockId}]] - ${found.parsed.content}`;
+				const msg = this.buildCommit({
+					title: `forget ${found.parsed.blockId}`,
+					tool: "forget",
+					extras: { Category: found.category, "Block-Id": found.parsed.blockId },
+				});
+				const sha = await this.commitWithHeadRetry(msg, async () => {
+					const [sourceFile, archiveFile] = await Promise.all([
+						this.getMemoryFile(found.category),
+						this.getFileOrNull(memoryArchivePath()),
+					]);
+					if (!sourceFile) throw new Error(`Memory file missing: ${memoryPath(found.category)}`);
+
+					let replaced = false;
+					const updatedSource = sourceFile.content
+						.split("\n")
+						.map((line) => {
+							if (!replaced && line === found.line) {
+								replaced = true;
+								return `~~${line}~~ <!-- archived ${archivedDate} -->`;
+							}
+							return line;
+						})
+						.join("\n");
+					if (!replaced) throw new Error(`Memory line missing: ${found.parsed.blockId}`);
+
+					return [
+						{ path: memoryPath(found.category), content: updatedSource },
+						{
+							path: memoryArchivePath(),
+							content: appendMarkdownLine(
+								archiveFile?.content ?? "# Memory Archive\n",
+								archiveLine,
+							),
+						},
+					];
+				});
+
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: JSON.stringify({
+								path: memoryPath(found.category),
+								archive_path: memoryArchivePath(),
+								block_id: found.parsed.blockId,
+								sha,
+							}),
+						},
+					],
+				};
+			},
+		);
+
+		this.server.registerTool(
+			"recall",
+			{
+				description: "Search active memory entries by text or block id.",
+				inputSchema: {
+					query: z.string().min(1).describe("Text or block id to search for"),
+					category: MemoryCategorySchema.optional().describe("Optional category filter"),
+					limit: z.number().int().min(1).max(50).default(10),
+				},
+				annotations: { readOnlyHint: true },
+			},
+			async ({ query, category, limit }) => {
+				const normalizedQuery = normalizeBlockId(query).toLowerCase();
+				let categories: MemoryCategory[] = category ? [category] : [...MEMORY_CATEGORIES];
+
+				if (!category && !BLOCK_ID_QUERY_RE.test(query)) {
+					const results = await this.github.searchCode(query, { folder: "15-memory", limit: 50 });
+					const resultCategories = results
+						.map((result) => categoryFromPath(result.path))
+						.filter((resultCategory): resultCategory is MemoryCategory => Boolean(resultCategory));
+					if (resultCategories.length > 0) categories = [...new Set(resultCategories)];
+				}
+
+				const now = new Date();
+				const records = (await this.readMemoryRecords(categories))
+					.filter((record) => !record.archived)
+					.filter((record) => !isExpired(record.date, record.ttlDays, now))
+					.filter((record) => {
+						const textMatch = record.content.toLowerCase().includes(query.toLowerCase());
+						const idMatch = record.blockId.toLowerCase().includes(normalizedQuery);
+						return textMatch || idMatch;
+					})
+					.sort((a, b) => b.date.localeCompare(a.date))
+					.slice(0, limit)
+					.map((record) => ({
+						category: record.category,
+						date: record.date,
+						content: record.content,
+						block_id: record.blockId,
+						ttl_days: record.ttlDays,
+						path: record.path,
+					}));
+
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify(records) }],
+				};
+			},
+		);
+
+		this.server.registerTool(
+			"sync_to_claude_memory",
+			{
+				description:
+					"Return a markdown snapshot of active Marcus memories for manual insertion into Claude memory.",
+				inputSchema: {},
+				annotations: { readOnlyHint: true },
+			},
+			async () => {
+				const now = new Date();
+				const active = (await this.readMemoryRecords(MEMORY_CATEGORIES))
+					.filter((record) => !record.archived)
+					.filter((record) => !isExpired(record.date, record.ttlDays, now))
+					.sort((a, b) => b.date.localeCompare(a.date))
+					.slice(0, 30);
+
+				let text = active.length
+					? [
+							"# Marcus memory snapshot",
+							"",
+							...active.map(
+								(record) =>
+									`- [${record.date}] (${record.category}, ^${record.blockId}) ${record.content}`,
+							),
+						].join("\n")
+					: "# Marcus memory snapshot\n\nNo active memories.";
+				if (text.length > 100_000) text = text.slice(0, 100_000);
+
+				return {
+					content: [{ type: "text" as const, text }],
 				};
 			},
 		);
