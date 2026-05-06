@@ -152,7 +152,7 @@ app.get("/vault/setup", (c) => {
 	const login = c.req.query("login") ?? "";
 	const appSlug = c.env.GITHUB_APP_SLUG;
 
-	const githubNewRepoUrl = `https://github.com/new?name=${VAULT_REPO_NAME}&visibility=private&description=Marcus+second+brain+vault`;
+	const githubNewRepoUrl = `https://github.com/new?name=${VAULT_REPO_NAME}&visibility=private&description=Marcus+-+Auto+Second+Brain+Vault`;
 	const installUrl = `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(state)}`;
 
 	const content = raw(
