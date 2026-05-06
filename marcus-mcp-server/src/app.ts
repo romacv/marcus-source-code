@@ -7,7 +7,6 @@ import {
 	exchangeCodeForUserToken,
 	findInstallationForApp,
 	getAuthenticatedUser,
-	provisionVault,
 	vaultExists,
 } from "./github-oauth";
 import { homeContent, layout } from "./utils";
@@ -124,11 +123,7 @@ app.get("/auth/github/callback", async (c) => {
 		return c.redirect(redirectTo);
 	}
 
-	// No install yet → create vault repo (user token now has scope=repo), then redirect to install
-	if (!(await vaultExists(userToken, user.login))) {
-		await provisionVault(userToken, user.login);
-	}
-
+	// No install yet — build phase2 state and redirect to vault setup page
 	const phase2Payload = JSON.stringify({
 		nonce: statePayload.nonce,
 		ts: Date.now(),
@@ -138,9 +133,46 @@ app.get("/auth/github/callback", async (c) => {
 	const phase2Sig = await hmacSign(c.env.KV_ENCRYPTION_KEY, phase2Payload);
 	const phase2State = btoa(phase2Payload) + "." + phase2Sig;
 
-	return c.redirect(
-		`https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`,
-	);
+	// If vault already exists, go straight to install
+	if (await vaultExists(userToken, user.login)) {
+		return c.redirect(
+			`https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`,
+		);
+	}
+
+	// Vault doesn't exist — show setup page (GitHub Apps can't create repos on behalf of users)
+	return c.redirect(`/vault/setup?state=${encodeURIComponent(btoa(phase2Payload) + "." + phase2Sig)}&login=${encodeURIComponent(user.login)}`);
+});
+
+// Intermediate page shown when vault repo doesn't exist yet.
+// Guides user to create the repo on GitHub, then continue to App install.
+app.get("/vault/setup", (c) => {
+	const state = c.req.query("state") ?? "";
+	const login = c.req.query("login") ?? "";
+	const appSlug = c.env.GITHUB_APP_SLUG;
+
+	const githubNewRepoUrl = `https://github.com/new?name=${VAULT_REPO_NAME}&visibility=private&description=Marcus+second+brain+vault`;
+	const installUrl = `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(state)}`;
+
+	return c.html(layout(
+		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
+			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">One more step</h1>
+			<p style="color:var(--muted);margin-bottom:2rem">Marcus stores your notes in a private GitHub repository. Create it now — it takes 10 seconds.</p>
+			<ol style="color:var(--muted);padding-left:1.25rem;margin-bottom:2rem;line-height:2">
+				<li>Click <strong style="color:var(--text)">Create Repository</strong> — GitHub will open with the name pre-filled</li>
+				<li>Make sure it's set to <strong style="color:var(--text)">Private</strong></li>
+				<li>Check <strong style="color:var(--text)">Add a README file</strong></li>
+				<li>Click <strong style="color:var(--text)">Create repository</strong> on GitHub</li>
+				<li>Come back here and click <strong style="color:var(--text)">Continue</strong></li>
+			</ol>
+			<div style="display:flex;gap:1rem;flex-wrap:wrap">
+				<a href="${githubNewRepoUrl}" target="_blank" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none">Create Repository on GitHub ↗</a>
+				<a href="${installUrl}" style="display:inline-block;padding:.75rem 1.5rem;border:1px solid var(--hair);color:var(--text);border-radius:6px;text-decoration:none">I created it, continue →</a>
+			</div>
+			<p style="color:var(--subtle);font-size:.8rem;margin-top:1.5rem">Repo will be: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
+		</div>`,
+		"Marcus — Create your vault",
+	));
 });
 
 app.get("/version", (c) => c.json({ version: "0.2.0", sha: "local-dev" }));
