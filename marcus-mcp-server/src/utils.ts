@@ -673,7 +673,7 @@ export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => 
 		<h2>Your data, your repo</h2>
 		<div class="privacy-block">
 			<p>Marcus is contentless by design. Your note content never passes through or is stored on Marcus servers. Marcus only stores a mapping from your Marcus user ID to your GitHub App installation ID, and short-lived OAuth tokens (TTL 24h).</p>
-			<p>All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens. The server is <a href="https://github.com/romacv/marcus-second-brain">MIT-licensed and open source</a>.</p>
+			<p>All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens. The server is <a href="https://github.com/romacv/marcus-source-code">MIT-licensed and open source</a>.</p>
 			<p>To revoke access: go to <a href="https://github.com/settings/installations">github.com/settings/installations</a>, find Marcus, and click Uninstall. Your vault repo and all notes stay in your GitHub account.</p>
 		</div>
 	</section>
