@@ -1,6 +1,10 @@
 import { html } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
 
+// Single source of truth for the Marcus brand mark in the site header.
+// Edit here to update every page's header simultaneously.
+export const siteLogoMarkup = html`<img src="/img/brain-mark.png" width="28" height="28" alt="" aria-hidden="true" class="site-logo__mark"><span class="site-logo__word">Marcus</span>`;
+
 export const layout = (content: HtmlEscapedString | string, title: string) => html`
 	<!DOCTYPE html>
 	<html lang="en">
@@ -111,17 +115,29 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				}
 
 				.site-logo {
-					font-family: var(--f-display);
-					font-style: italic;
-					font-size: 1.4375rem;
-					font-weight: 600;
-					letter-spacing: -.015em;
+					display: inline-flex;
+					align-items: center;
+					gap: .5rem;
 					color: var(--text);
 					text-decoration: none;
 					transition: color 150ms ease;
 				}
 
-				.site-logo:hover { color: var(--accent); }
+				.site-logo__mark {
+					display: block;
+					height: 28px;
+					width: auto;
+				}
+
+				.site-logo__word {
+					font-family: var(--f-display);
+					font-style: italic;
+					font-size: 1.4375rem;
+					font-weight: 600;
+					letter-spacing: -.015em;
+				}
+
+				.site-logo:hover .site-logo__word { color: var(--accent); }
 
 				.site-header__pill {
 					font-family: var(--f-mono);
@@ -570,7 +586,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 		<body>
 			<header class="site-header">
 				<div class="shell site-header__inner">
-					<a href="/" class="site-logo">Marcus.</a>
+					<a href="/" class="site-logo" aria-label="Marcus — home">${siteLogoMarkup}</a>
 					<span class="site-header__pill">Second Brain</span>
 				</div>
 			</header>
