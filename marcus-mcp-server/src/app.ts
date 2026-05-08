@@ -163,20 +163,17 @@ app.get("/vault/install", async (c) => {
 	const installUrl = `https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?state=${encodeURIComponent(state)}`;
 
 	const content = html`
-    <section class="hero">
+    <section class="hero" style="grid-template-columns:1fr;max-width:680px;margin-inline:auto;text-align:center">
       <div class="hero__copy">
         <h1>Almost there</h1>
         <p class="lede">Marcus has created your private vault. One last step: install the app on it so it can read &amp; write your notes.</p>
-        <div class="cta">
-          <a class="cta--primary" href="${installUrl}">Continue to GitHub →</a>
-        </div>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" style="max-width:680px;margin-inline:auto;text-align:center">
       <p class="section__eyebrow">What you'll see next</p>
       <h2>4 clicks on GitHub</h2>
-      <ol class="connect-steps">
+      <ol class="connect-steps" style="margin-inline:auto;text-align:left">
         <li>On the next screen, choose <strong>Only select repositories</strong></li>
         <li>Click the <strong>Select repositories</strong> dropdown</li>
         <li>Pick <code>${VAULT_REPO_NAME}</code> (the one we just created)</li>
@@ -185,7 +182,10 @@ app.get("/vault/install", async (c) => {
       <img class="section__img section__img--center"
            src="/img/install-authorize.png"
            alt="GitHub Install & Authorize screen — Only select repositories selected, ${VAULT_REPO_NAME} picked from dropdown, green Install & Authorize button">
-      <p style="color:var(--subtle);font-family:var(--f-mono);font-size:var(--tx-xs)">Your vault: <a href="https://github.com/${login}/${VAULT_REPO_NAME}" style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</a></p>
+      <div class="cta" style="justify-content:center;margin-top:2.5rem">
+        <a class="cta--primary" href="${installUrl}">Continue to GitHub →</a>
+      </div>
+      <p style="color:var(--subtle);font-family:var(--f-mono);font-size:var(--tx-xs);margin-top:1.5rem">Your vault: <a href="https://github.com/${login}/${VAULT_REPO_NAME}" style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</a></p>
     </section>
   `;
 
