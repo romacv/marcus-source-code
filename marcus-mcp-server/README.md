@@ -109,6 +109,93 @@ Update the Claude configuration file to point to your `workers.dev` URL (ex: `wo
 }
 ```
 
+## Test the new-user flow end-to-end
+
+Use this whenever you want to re-exercise OAuth + auto-provision + GitHub App
+install. The flow has three branches (fresh user, returning user, name collision)
+and resetting state proves all of them.
+
+### 1. Reset to a clean new-user state
+
+All three steps are required — skipping any of them sends you down a different
+branch.
+
+```bash
+# 1. Delete the vault repo (destructive — confirms the auto-provision branch)
+gh repo delete romacv/marcus-second-brain-vault --yes
+```
+
+2. Uninstall the GitHub App: <https://github.com/settings/installations>  
+   (drops the installation token; forces Phase 2 to re-create one).
+3. Revoke the OAuth App authorization: <https://github.com/settings/apps/authorizations>  
+   (drops the cached `gho_` user-access token; forces a fresh token exchange
+   with `repo` scope).
+
+### 2. Tail the worker
+
+```bash
+npx wrangler tail --format=pretty
+```
+
+### 3. Reconnect Marcus in Claude.ai
+
+Settings → Connectors → Marcus → Disconnect, then Connect.
+
+### 4. Expected tail signature (fresh user)
+
+```
+[token-exchange] {"status":200,"token_prefix":"gho_…","scope":"repo"}
+GET /auth/github/callback?code=…
+GET /vault/install?state=…&login=romacv
+GET /auth/github/callback?installation_id=…&setup_action=install
+[app-jwt] iss=Iv23… kid=…
+POST /token  → 200
+POST /mcp    → 200  (sustained)
+```
+
+The `gho_` (not `ghu_`) prefix proves the OAuth App handled user-auth.
+A `[provision-vault]` warning means auto-provision fell back to `/vault/setup`
+— investigate before moving on.
+
+### 5. Verify the vault was seeded
+
+```bash
+gh api /repos/romacv/marcus-second-brain-vault/contents/_marcus/version.txt --jq '.content' | base64 -d
+# expect: 1
+gh api /repos/romacv/marcus-second-brain-vault/git/trees/main --jq '.tree[].path' | sort
+# expect: 00-daily, 10-journal, 15-memory, 20-topics, 30-people, 40-projects,
+#         50-resources, 60-photos, 90-archive, README.md, _marcus, index.md
+```
+
+### 6. Returning-user regression
+
+Without resetting anything, disconnect + reconnect once more.
+
+- Tail should hit `marcusVaultExists=true` (skips `provisionVault`).
+- Redirect chain: `/vault/install` → install screen → `installation_id=…`
+  → `/mcp` 200.
+
+### 7. Name-collision regression
+
+```bash
+gh repo delete romacv/marcus-second-brain-vault --yes
+gh repo create romacv/marcus-second-brain-vault --private --add-readme \
+  --description "test collision"
+echo "legacy" > /tmp/legacy.md
+gh api -X PUT /repos/romacv/marcus-second-brain-vault/contents/legacy.md \
+  -f message="seed unrelated content" \
+  -f content="$(base64 < /tmp/legacy.md)"
+```
+
+Reconnect Marcus. Expected:
+
+- `marcusVaultExists` returns `false` (sentinel `_marcus/version.txt` missing).
+- `provisionVault` returns 422 (`name already exists`).
+- Worker redirects to `/vault/conflict?login=romacv`.
+
+Cleanup: `gh repo delete romacv/marcus-second-brain-vault --yes`, then re-run
+the fresh-user flow if you want to leave the vault working.
+
 ## Debugging
 
 Should anything go wrong it can be helpful to restart Claude, or to try connecting directly to your
