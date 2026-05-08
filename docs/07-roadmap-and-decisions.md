@@ -17,7 +17,7 @@
 ### Brand и legal
 
 - [x] Название - **Marcus** (filed как stylized или compound)
-- [x] Title/tagline - **"Marcus - Auto Second Brain"**
+- [x] Title/tagline - **"Marcus - Second Brain"**
 - [x] Trademark scope - Classes 9 + 42, US first
 - [x] Никогда не использовать "Building a Second Brain" anywhere
 - [x] Никогда не делать "Second Brain" legal product name

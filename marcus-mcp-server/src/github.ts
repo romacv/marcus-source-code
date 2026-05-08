@@ -1,4 +1,6 @@
 import { createPrivateKey, createSign } from "node:crypto";
+import { mapGitHubError, StructuredToolError } from "./errors.ts";
+import { parseFrontmatter } from "./vault.ts";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -15,6 +17,8 @@ type SearchMatch = {
 	path: string;
 	sha: string;
 	tags?: string[];
+	updated?: string;
+	match?: "filename" | "frontmatter" | "body";
 };
 
 type CommitFile = {
@@ -30,6 +34,19 @@ type Commit = {
 type TreeEntry = {
 	path: string;
 	type: "blob" | "tree";
+};
+
+type ContentsResult = {
+	path: string;
+	sha: string;
+	content: string;
+	frontmatter: ReturnType<typeof parseFrontmatter>["frontmatter"];
+	body: string;
+};
+
+type TreeCacheEntry = {
+	expires: number;
+	entries: TreeEntry[];
 };
 
 // Signs a JWT for GitHub App authentication using node:crypto.
@@ -57,15 +74,29 @@ function signAppJwt(clientId: string, privateKeyPem: string): string {
 export class GitHubClient {
 	private installationToken: string | null = null;
 	private tokenExpiry = 0;
+	private treeCache = new Map<string, TreeCacheEntry>();
+	private readonly privateKeyPem: string;
+	private readonly appId: string;
+	private readonly clientId: string;
+	private readonly installationId: string;
+	private readonly owner: string;
+	private readonly repo: string;
 
 	constructor(
-		private readonly privateKeyPem: string,
-		private readonly appId: string,
-		private readonly clientId: string,
-		private readonly installationId: string,
-		private readonly owner: string,
-		private readonly repo: string,
-	) {}
+		privateKeyPem: string,
+		appId: string,
+		clientId: string,
+		installationId: string,
+		owner: string,
+		repo: string,
+	) {
+		this.privateKeyPem = privateKeyPem;
+		this.appId = appId;
+		this.clientId = clientId;
+		this.installationId = installationId;
+		this.owner = owner;
+		this.repo = repo;
+	}
 
 	private async getToken(): Promise<string> {
 		if (this.installationToken && Date.now() < this.tokenExpiry) {
@@ -88,7 +119,7 @@ export class GitHubClient {
 		if (!res.ok) {
 			const body = await res.text();
 			console.error("[app-token]", res.status, body.slice(0, 500));
-			throw new Error(`GitHub token fetch failed: ${res.status}: ${body}`);
+			throw mapGitHubError(res.status, res.headers, body);
 		}
 		const data = (await res.json()) as { token: string; expires_at: string };
 		this.installationToken = data.token;
@@ -111,7 +142,7 @@ export class GitHubClient {
 		});
 		if (!res.ok) {
 			const body = await res.text();
-			throw new Error(`GitHub API ${path} → ${res.status}: ${body}`);
+			throw mapGitHubError(res.status, res.headers, body);
 		}
 		return res;
 	}
@@ -187,6 +218,98 @@ export class GitHubClient {
 			.map((e) => ({ path: e.path, type: e.type }));
 	}
 
+	async getTreesRecursive(folder?: string): Promise<TreeEntry[]> {
+		const key = folder ?? "*";
+		const cached = this.treeCache.get(key);
+		if (cached && cached.expires > Date.now()) return cached.entries;
+
+		const res = await this.api(
+			`/repos/${this.owner}/${this.repo}/git/trees/main?recursive=1`,
+		);
+		const data = (await res.json()) as {
+			tree: Array<{ path: string; type: "blob" | "tree" }>;
+		};
+		const entries = data.tree
+			.filter((e) => e.type === "blob")
+			.filter((e) => e.path.endsWith(".md"))
+			.filter((e) => !folder || e.path.startsWith(folder))
+			.map((e) => ({ path: e.path, type: e.type }));
+		this.treeCache.set(key, { expires: Date.now() + 30_000, entries });
+		return entries;
+	}
+
+	async getContentsBatch(paths: string[]): Promise<ContentsResult[]> {
+		const uniquePaths = [...new Set(paths)].slice(0, 50);
+		const files = await Promise.allSettled(uniquePaths.map((path) => this.getFile(path)));
+		return files.flatMap((result, index) => {
+			if (result.status !== "fulfilled") return [];
+			const parsed = parseFrontmatter(result.value.content);
+			return [{
+				path: uniquePaths[index],
+				sha: result.value.sha,
+				content: result.value.content,
+				frontmatter: parsed.frontmatter,
+				body: parsed.body,
+			}];
+		});
+	}
+
+	async localScan(
+		query: string,
+		opts: { folder?: string; tags?: string[]; limit?: number } = {},
+	): Promise<SearchMatch[]> {
+		const limit = opts.limit ?? 50;
+		const trees = await this.getTreesRecursive(opts.folder);
+		const commits = await this.getRecentCommits(limit, opts.folder).catch(() => []);
+		const updatedByPath = new Map<string, string>();
+		for (const commit of commits) {
+			for (const file of commit.files ?? []) {
+				if (!file.filename.endsWith(".md")) continue;
+				if (opts.folder && !file.filename.startsWith(opts.folder)) continue;
+				if (!updatedByPath.has(file.filename)) updatedByPath.set(file.filename, commit.commit.author.date);
+			}
+		}
+
+		const candidatePaths = trees
+			.map((entry) => entry.path)
+			.sort((a, b) => (updatedByPath.get(b) ?? "").localeCompare(updatedByPath.get(a) ?? ""))
+			.slice(0, 50);
+		const files = await this.getContentsBatch(candidatePaths);
+		const normalizedQuery = query.toLowerCase();
+		const tagFilter = opts.tags?.map((tag) => tag.toLowerCase()) ?? [];
+
+		const rank = { filename: 3, frontmatter: 2, body: 1 } as const;
+		return files.flatMap((file) => {
+			const tags = Array.isArray(file.frontmatter.tags)
+				? file.frontmatter.tags.map(String)
+				: [];
+			if (tagFilter.length > 0 && !tagFilter.some((tag) => tags.map((t) => t.toLowerCase()).includes(tag))) {
+				return [];
+			}
+			const frontmatterText = JSON.stringify(file.frontmatter).toLowerCase();
+			const pathText = file.path.toLowerCase();
+			const bodyText = file.body.toLowerCase();
+			const match: SearchMatch["match"] | null = pathText.includes(normalizedQuery)
+				? "filename"
+				: frontmatterText.includes(normalizedQuery)
+					? "frontmatter"
+					: bodyText.includes(normalizedQuery)
+						? "body"
+						: null;
+			if (!match) return [];
+			return [{
+				path: file.path,
+				sha: file.sha,
+				tags,
+				updated: updatedByPath.get(file.path),
+				match,
+			}];
+		}).sort((a, b) => {
+			const rankDelta = rank[b.match ?? "body"] - rank[a.match ?? "body"];
+			return rankDelta || (b.updated ?? "").localeCompare(a.updated ?? "");
+		});
+	}
+
 	async getRecentCommits(limit: number, folder?: string): Promise<Commit[]> {
 		const pathFilter = folder ? `&path=${encodeURIComponent(folder)}` : "";
 		const res = await this.api(
@@ -248,13 +371,15 @@ export class GitHubClient {
 		});
 		if (!res.ok) {
 			const body = await res.text();
-			throw new Error(`GraphQL HTTP ${res.status}: ${body}`);
+			throw mapGitHubError(res.status, res.headers, body);
 		}
 		const data = (await res.json()) as {
 			data?: { createCommitOnBranch: { commit: { oid: string } } };
 			errors?: unknown;
 		};
-		if (data.errors) throw new Error(`GraphQL error: ${JSON.stringify(data.errors)}`);
+		if (data.errors) {
+			throw new StructuredToolError("conflict", `GraphQL error: ${JSON.stringify(data.errors)}`, "retry");
+		}
 		return data.data!.createCommitOnBranch.commit.oid;
 	}
 }

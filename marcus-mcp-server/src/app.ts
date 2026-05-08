@@ -21,7 +21,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 app.get("/", async (c) => {
 	const content = await homeContent(c.req.raw);
-	return c.html(layout(content, "Marcus - Auto Second Brain"));
+	return c.html(layout(content, "Marcus - Second Brain"));
 });
 
 // Step 1: Claude calls /authorize → redirect to GitHub OAuth
@@ -152,7 +152,7 @@ app.get("/vault/setup", (c) => {
 	const login = c.req.query("login") ?? "";
 	const appSlug = c.env.GITHUB_APP_SLUG;
 
-	const githubNewRepoUrl = `https://github.com/new?name=${VAULT_REPO_NAME}&visibility=private&description=Marcus+-+Auto+Second+Brain+Vault`;
+	const githubNewRepoUrl = `https://github.com/new?name=${VAULT_REPO_NAME}&visibility=private&description=Marcus+-+Second+Brain+Vault`;
 	const installUrl = `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(state)}`;
 
 	const content = raw(

@@ -12,6 +12,18 @@ export const MEMORY_CATEGORIES = [
 
 export type MemoryCategory = (typeof MEMORY_CATEGORIES)[number];
 
+export const VAULT_TOPIC_FOLDERS = [
+	"00-daily",
+	"10-journal",
+	"15-memory",
+	"20-topics",
+	"30-people",
+	"40-projects",
+	"50-resources",
+	"60-photos",
+	"90-archive",
+] as const;
+
 function titleCase(value: string): string {
 	return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
@@ -159,6 +171,67 @@ export function parseFrontmatter(content: string): ParsedNote {
 	}
 
 	return { frontmatter, body };
+}
+
+const AUTO_TAG_VOCAB = new Set([
+	"android",
+	"api",
+	"claude",
+	"cloudflare",
+	"compose",
+	"codex",
+	"docker",
+	"figma",
+	"github",
+	"ios",
+	"iterm",
+	"linear",
+	"macos",
+	"mcp",
+	"node",
+	"oauth",
+	"react",
+	"slack",
+	"swift",
+	"swiftui",
+	"typescript",
+	"wrangler",
+	"xcode",
+]);
+
+const AUTO_TAG_STOP_WORDS = new Set([
+	"about",
+	"after",
+	"also",
+	"and",
+	"are",
+	"but",
+	"for",
+	"from",
+	"have",
+	"into",
+	"not",
+	"that",
+	"the",
+	"this",
+	"with",
+	"you",
+]);
+
+export function extractAutoTags(content: string, frontmatter: FrontmatterFields = {}): string[] {
+	if (Array.isArray(frontmatter.tags) && frontmatter.tags.length > 0) return frontmatter.tags;
+
+	const counts = new Map<string, number>();
+	for (const raw of content.toLowerCase().match(/[a-z][a-z0-9+#.-]{1,}/g) ?? []) {
+		const tag = raw.replace(/^[.#]+|[.#]+$/g, "");
+		if (!AUTO_TAG_VOCAB.has(tag) || AUTO_TAG_STOP_WORDS.has(tag)) continue;
+		counts.set(tag, (counts.get(tag) ?? 0) + 1);
+	}
+
+	return [...counts.entries()]
+		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+		.slice(0, 5)
+		.map(([tag]) => tag);
 }
 
 // Returns the vault path for today's daily note.

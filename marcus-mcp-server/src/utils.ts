@@ -571,7 +571,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 			<header class="site-header">
 				<div class="shell site-header__inner">
 					<a href="/" class="site-logo">Marcus.</a>
-					<span class="site-header__pill">Auto Second Brain</span>
+					<span class="site-header__pill">Second Brain</span>
 				</div>
 			</header>
 			<main class="site-main">
@@ -581,7 +581,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				<div class="shell site-footer__row">
 					<span class="site-footer__item">Marcus</span>
 					<span class="site-footer__sep" aria-hidden="true"></span>
-					<span class="site-footer__item">Auto Second Brain</span>
+					<span class="site-footer__item">Second Brain</span>
 					<span class="site-footer__sep" aria-hidden="true"></span>
 					<span class="site-footer__item">MIT</span>
 					<span class="site-footer__sep" aria-hidden="true"></span>
@@ -595,7 +595,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => html`
 	<section class="hero">
 		<div class="hero__copy">
-			<h1>Automatic second brain</h1>
+			<h1>Marcus - Your Automatic Second Brain</h1>
 			<p class="lede">Conversations with Claude, ChatGPT, and Perplexity become structured markdown memory in your own GitHub repo.</p>
 			<div class="cta">
 				<a class="cta--primary" href="#connect">Connect Marcus →</a>
@@ -607,7 +607,7 @@ export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => 
 
 	<section id="how" class="section">
 		<p class="section__eyebrow">How it works</p>
-		<h2>Three steps, fully automatic</h2>
+		<h2>Three steps to automate your second brain</h2>
 		<div class="steps-row">
 			<div class="step">
 				<span class="step__num">01</span>
@@ -640,7 +640,7 @@ export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => 
 		<h2>Connect in 4 steps</h2>
 		<ol class="connect-steps">
 			<li>Go to <a href="https://claude.ai/settings/connectors">claude.ai/settings/connectors</a> and click <strong>Add custom connector</strong>.</li>
-			<li>Paste <code>https://marcus-mcp-server.r-df5.workers.dev/mcp</code> in the URL field, name it <strong>Marcus Auto Second Brain</strong>, and click Add.</li>
+			<li>Paste <code>https://marcus-mcp-server.r-df5.workers.dev/mcp</code> in the URL field, name it <strong>Marcus Second Brain</strong>, and click Add.</li>
 			<li>Sign in with GitHub. Marcus creates a private <code>marcus-vault</code> repo in your account and requests access to that repo only.</li>
 			<li>Open a new Claude chat, click <strong>+</strong> → Connectors → enable Marcus. Ask Claude: <em>"Save this to my second brain."</em></li>
 		</ol>

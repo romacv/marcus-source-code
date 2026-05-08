@@ -1,4 +1,4 @@
-# Marcus - Auto Second Brain
+# Marcus - Second Brain
 
 Marcus remembers everything you discuss with Claude, ChatGPT, and Perplexity — and stores it as private markdown notes in your own GitHub repository.
 
@@ -20,7 +20,7 @@ In the URL field, paste:
 https://marcus-mcp-server.r-df5.workers.dev/mcp
 ```
 
-Give it a name (e.g. **Marcus Auto Second Brain**) and click **Add**.
+Give it a name (e.g. **Marcus Second Brain**) and click **Add**.
 
 <div align="center">
   <img src="img/add-connector.png" alt="Add custom connector dialog in Claude with Marcus URL" width="560"/>

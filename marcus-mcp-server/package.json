@@ -9,6 +9,7 @@
 		"lint:fix": "oxlint --fix",
 		"start": "wrangler dev",
 		"cf-typegen": "wrangler types",
+		"test": "node --test --experimental-strip-types src/__tests__/*.test.ts",
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {

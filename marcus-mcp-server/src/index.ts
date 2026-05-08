@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpAgent } from "agents/mcp";
 import { z } from "zod";
 import app from "./app";
+import { formatToolError, isStructuredToolError, StructuredToolError } from "./errors";
 import { GitHubClient } from "./github";
 import {
 	formatMemoryLine,
@@ -16,12 +17,14 @@ import {
 	archivePath,
 	buildFrontmatter,
 	dailyNotePath,
+	extractAutoTags,
 	generateUlid,
 	MEMORY_CATEGORIES,
 	type MemoryCategory,
 	memoryArchivePath,
 	memoryPath,
 	parseFrontmatter,
+	VAULT_TOPIC_FOLDERS,
 } from "./vault";
 
 export type MarcusEnv = Cloudflare.Env & {
@@ -51,6 +54,7 @@ const FrontmatterSchema = z.object({
 });
 
 type GitHubFile = Awaited<ReturnType<GitHubClient["getFile"]>>;
+type ToolExtra = { requestId?: string | number; requestInfo?: { url?: string | URL } };
 
 type MemoryRecord = ParsedMemoryLine & {
 	category: MemoryCategory;
@@ -116,10 +120,15 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 	server = new McpServer({
 		name: "Marcus",
 		version: "0.1.0",
+		description: "Marcus Second Brain vault tools for durable personal memory.",
 	});
 
 	get github(): GitHubClient {
-		if (!this.props) throw new Error("Not authenticated");
+		if (!this.props) {
+			throw new StructuredToolError("auth_required", "Not authenticated", "reauth", {
+				reauth_url: "/authorize",
+			});
+		}
 		return new GitHubClient(
 			this.env.GITHUB_APP_PRIVATE_KEY,
 			this.env.GITHUB_APP_ID,
@@ -152,9 +161,29 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 		return lines.join("\n");
 	}
 
+	private isNotFound(err: unknown): boolean {
+		return (isStructuredToolError(err) && err.code === "not_found") || /→ 404:| 404:/.test(String(err));
+	}
+
+	private async run<T>(name: string, extra: ToolExtra | undefined, fn: () => Promise<T>): Promise<T | ReturnType<typeof formatToolError>> {
+		try {
+			return await fn();
+		} catch (err) {
+			const requestId = extra?.requestId === undefined ? undefined : String(extra.requestId);
+			const code = isStructuredToolError(err) ? err.code : "internal";
+			console.error("[tool]", {
+				request_id: requestId,
+				user_id: this.props?.userId,
+				tool_name: name,
+				code,
+			});
+			return formatToolError(err, requestId);
+		}
+	}
+
 	private async getFileOrNull(path: string): Promise<GitHubFile | null> {
 		return this.github.getFile(path).catch((e: unknown) => {
-			if (!/→ 404:/.test(String(e))) throw e;
+			if (!this.isNotFound(e)) throw e;
 			return null;
 		});
 	}
@@ -222,7 +251,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 			"create_note",
 			{
 				description:
-					"Create a new markdown note in the vault with YAML frontmatter. Returns the commit SHA.",
+					"Save new knowledge into the user's Second Brain vault as a markdown note with YAML frontmatter. Returns the commit SHA.",
 				inputSchema: {
 					path: z
 						.string()
@@ -232,22 +261,27 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					content: z.string().describe("Markdown body of the note (without frontmatter)"),
 					frontmatter: FrontmatterSchema.optional(),
 				},
-				annotations: { destructiveHint: false },
+				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ path, content, frontmatter }) => {
+			async ({ path, content, frontmatter }, extra) => this.run("create_note", extra, async () => {
 				const id = generateUlid();
 				const now = new Date().toISOString();
+				const autoTags = extractAutoTags(content, frontmatter ?? {});
+				const noteFrontmatter = {
+					...frontmatter,
+					...(frontmatter?.tags?.length ? {} : autoTags.length ? { tags: autoTags } : {}),
+				};
 				const fm = buildFrontmatter({
 					id,
 					created: now,
 					updated: now,
-					...frontmatter,
+					...noteFrontmatter,
 				});
 				const fullContent = `${fm}\n\n${content}`;
 				const msg = this.buildCommit({
 					title: `create ${path}`,
 					tool: "create_note",
-					extras: frontmatter?.tags?.length ? { Tags: frontmatter.tags.join(", ") } : undefined,
+					extras: noteFrontmatter.tags?.length ? { Tags: noteFrontmatter.tags.join(", ") } : undefined,
 				});
 				const result = await this.github.createFile(path, fullContent, msg);
 				return {
@@ -258,14 +292,14 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						},
 					],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"update_note",
 			{
 				description:
-					"Update an existing note. Mode: replace (full), append (add to end), prepend (add to start). Use expected_sha for optimistic concurrency.",
+					"Update an existing Second Brain vault note. Mode: replace, append, or prepend. Use expected_sha for optimistic concurrency.",
 				inputSchema: {
 					path: z.string().describe("Relative vault path"),
 					content: z.string().describe("Content to write/append/prepend"),
@@ -278,23 +312,14 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.optional()
 						.describe("Current file SHA to prevent overwrite conflicts"),
 				},
-				annotations: { destructiveHint: false },
+				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
-			async ({ path, content, mode, expected_sha }) => {
+			async ({ path, content, mode, expected_sha }, extra) => this.run("update_note", extra, async () => {
 				const current = await this.github.getFile(path);
 				if (expected_sha && current.sha !== expected_sha) {
-					return {
-						content: [
-							{
-								type: "text" as const,
-								text: JSON.stringify({
-									error: "sha_mismatch",
-									current_sha: current.sha,
-								}),
-							},
-						],
-						isError: true,
-					};
+					throw new StructuredToolError("conflict", "SHA mismatch", "retry", {
+						current_sha: current.sha,
+					});
 				}
 				const existing = current.content;
 				const { body: existingBody, frontmatter: fm } = parseFrontmatter(existing);
@@ -316,14 +341,14 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({ path, sha: result.sha }) }],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"delete_note",
 			{
 				description:
-					"Delete a note. Mode 'archive' moves it to 90-archive/ (safe, default). Mode 'hard' permanently deletes.",
+					"Remove an Second Brain vault note. Mode 'archive' moves it to 90-archive/ (safe, default). Mode 'hard' permanently deletes.",
 				inputSchema: {
 					path: z.string().describe("Relative vault path"),
 					mode: z
@@ -331,9 +356,9 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.default("archive")
 						.describe("archive = move to 90-archive/, hard = permanent delete"),
 				},
-				annotations: { destructiveHint: true },
+				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
-			async ({ path, mode }) => {
+			async ({ path, mode }, extra) => this.run("delete_note", extra, async () => {
 				const current = await this.github.getFile(path);
 				if (mode === "archive") {
 					const dest = archivePath(path);
@@ -361,79 +386,156 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({ deleted: path }) }],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"search_notes",
 			{
-				description: "Search notes by keyword, tags, or folder prefix using GitHub code search.",
+				description:
+					"ALWAYS call before answering technical or work questions. Searches the user's personal vault (Second Brain) for previously saved how-to guides, configs, settings, workflows, and decisions. Web search is fallback only.",
 				inputSchema: {
 					query: z.string().describe("Search query"),
 					tags: z.array(z.string()).optional().describe("Filter by tags in frontmatter"),
 					folder: z.string().optional().describe("Limit to folder prefix, e.g. '20-topics'"),
 					limit: z.number().int().min(1).max(50).default(10),
 				},
-				annotations: { readOnlyHint: true },
+				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ query, tags, folder, limit }) => {
-				const results = await this.github.searchCode(query, { folder, limit });
-				const filtered = tags
-					? results.filter((r) => tags.some((t) => r.tags?.includes(t)))
-					: results;
+			async ({ query, tags, folder, limit }, extra) => this.run("search_notes", extra, async () => {
+				const [codeResult, localResult] = await Promise.allSettled([
+					this.github.searchCode(query, { folder, limit }),
+					this.github.localScan(query, { folder, tags, limit: 50 }),
+				]);
+				const codeHits = codeResult.status === "fulfilled" ? codeResult.value : [];
+				if (codeResult.status === "rejected") {
+					const err = codeResult.reason;
+					if (isStructuredToolError(err) && (err.code === "rate_limited" || err.code === "install_revoked")) {
+						console.warn("[search-notes]", { fallback: "local", code: err.code });
+					} else {
+						console.warn("[search-notes]", { fallback: "local", error: String(err) });
+					}
+				}
+				if (localResult.status === "rejected" && codeHits.length === 0) throw localResult.reason;
+				const localHits = localResult.status === "fulfilled" ? localResult.value : [];
+				const codeDetails = await this.github.getContentsBatch(codeHits.map((hit) => hit.path)).catch(() => []);
+				const detailsByPath = new Map(codeDetails.map((file) => [file.path, file]));
+				const tagFilter = tags?.map((tag) => tag.toLowerCase()) ?? [];
+				const merged = [...codeHits, ...localHits]
+					.map((hit) => {
+						const details = detailsByPath.get(hit.path);
+						const hitTags = hit.tags ?? (Array.isArray(details?.frontmatter.tags) ? details.frontmatter.tags.map(String) : []);
+						return { ...hit, tags: hitTags };
+					})
+					.filter((hit) => tagFilter.length === 0 || tagFilter.some((tag) => hit.tags?.map((t) => t.toLowerCase()).includes(tag)))
+					.reduce<Array<typeof codeHits[number]>>((acc, hit) => {
+						if (!acc.some((existing) => existing.path === hit.path)) acc.push(hit);
+						return acc;
+					}, [])
+					.sort((a, b) => {
+						const rank = { filename: 3, frontmatter: 2, body: 1 } as const;
+						const rankDelta = (rank[b.match ?? "body"] ?? 0) - (rank[a.match ?? "body"] ?? 0);
+						return rankDelta || (b.updated ?? "").localeCompare(a.updated ?? "");
+					});
 				return {
 					content: [
 						{
 							type: "text" as const,
-							text: JSON.stringify(filtered.slice(0, limit)),
+							text: JSON.stringify(merged.slice(0, limit)),
 						},
 					],
 				};
+			}),
+		);
+
+		this.server.registerTool(
+			"get_vault_context",
+			{
+				description:
+					"Lightweight overview of what the user has notes about. Call at the start of a technical conversation to know if the vault likely covers the topic.",
+				inputSchema: {},
+				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
+			async (_args, extra) => this.run("get_vault_context", extra, async () => {
+				const commits = await this.github.getRecentCommits(60, "20-topics");
+				const seen = new Set<string>();
+				const recentTopics: string[] = [];
+				for (const commit of commits) {
+					for (const file of commit.files ?? []) {
+						if (!file.filename.endsWith(".md") || seen.has(file.filename)) continue;
+						seen.add(file.filename);
+						recentTopics.push(file.filename);
+						if (recentTopics.length >= 20) break;
+					}
+					if (recentTopics.length >= 20) break;
+				}
+				const files = await this.github.getContentsBatch(recentTopics);
+				const tagCounts = new Map<string, number>();
+				for (const file of files) {
+					const noteTags = Array.isArray(file.frontmatter.tags) ? file.frontmatter.tags.map(String) : [];
+					for (const tag of noteTags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+				}
+				const tags = [...tagCounts.entries()]
+					.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+					.slice(0, 20)
+					.map(([name, count]) => ({ name, count }));
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							tags,
+							recent_topics: recentTopics,
+							folders: [...VAULT_TOPIC_FOLDERS],
+						}),
+					}],
+				};
+			}),
 		);
 
 		this.server.registerTool(
 			"get_note",
 			{
-				description: "Get a note by its vault path. Returns frontmatter and markdown content.",
+				description:
+					"Read a specific note from the user's Second Brain vault by path. Use after search_notes when a saved decision, workflow, or config looks relevant.",
 				inputSchema: {
 					path: z.string().describe("Relative vault path"),
 				},
-				annotations: { readOnlyHint: true },
+				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ path }) => {
+			async ({ path }, extra) => this.run("get_note", extra, async () => {
 				const file = await this.github.getFile(path);
 				return {
 					content: [{ type: "text" as const, text: file.content }],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"list_structure",
 			{
-				description: "List the vault folder structure and file index.",
+				description:
+					"List the user's Second Brain vault folders and files when you need to browse saved knowledge by area before answering.",
 				inputSchema: {
 					folder: z
 						.string()
 						.optional()
 						.describe("Folder prefix to list, omit for full vault root"),
 				},
-				annotations: { readOnlyHint: true },
+				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ folder }) => {
+			async ({ folder }, extra) => this.run("list_structure", extra, async () => {
 				const tree = await this.github.listTree(folder ?? "");
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify(tree) }],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"append_to_daily_note",
 			{
 				description:
-					"Append a timestamped entry to today's daily note (00-daily/YYYY/MM/YYYY-MM-DD.md). Creates the note if it doesn't exist.",
+					"Save new daily context into the user's Second Brain vault. Append a timestamped entry to today's daily note and create it if needed.",
 				inputSchema: {
 					content: z.string().describe("Markdown text to append"),
 					heading: z
@@ -441,9 +543,9 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.optional()
 						.describe("Optional H2 section heading to group content under"),
 				},
-				annotations: { destructiveHint: false },
+				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ content, heading }) => {
+			async ({ content, heading }, extra) => this.run("append_to_daily_note", extra, async () => {
 				const today = new Date();
 				const path = dailyNotePath(today);
 				const ts = today.toISOString();
@@ -455,7 +557,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				let sha: string | undefined;
 				for (let attempt = 0; attempt < 2; attempt++) {
 					const existing = await this.github.getFile(path).catch((e: unknown) => {
-						if (!/→ 404:/.test(String(e))) throw e;
+						if (!this.isNotFound(e)) throw e;
 						return null;
 					});
 					const body = existing
@@ -479,14 +581,14 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({ path, sha }) }],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"remember",
 			{
 				description:
-					"Store a durable memory in the GitHub vault and link it from today's daily note.",
+					"Store a durable personal memory in the user's Second Brain vault and link it from today's daily note for future vault-first recall.",
 				inputSchema: {
 					content: z.string().min(1).describe("Memory text to store"),
 					category: MemoryCategorySchema.describe("Memory category"),
@@ -502,9 +604,9 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.optional()
 						.describe("Optional time-to-live in days; expired memories are hidden by recall"),
 				},
-				annotations: { destructiveHint: false },
+				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ content, category, date, ttl }) => {
+			async ({ content, category, date, ttl }, extra) => this.run("remember", extra, async () => {
 				const now = new Date();
 				const blockId = generateBlockId();
 				const memoryDate = date ?? todayIsoDate(now);
@@ -556,26 +658,23 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						},
 					],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"forget",
 			{
 				description:
-					"Archive a memory by block id or text query. The source line is struck through and linked from 15-memory/_archive.md.",
+					"Archive a saved Second Brain memory by block id or text query when the user says it is stale or should no longer be recalled.",
 				inputSchema: {
 					query: z.string().min(1).describe("Block id like id-a1b2c3 or text to forget"),
 				},
-				annotations: { destructiveHint: true },
+				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
-			async ({ query }) => {
+			async ({ query }, extra) => this.run("forget", extra, async () => {
 				const found = await this.findMemoryByQuery(query);
 				if (!found) {
-					return {
-						content: [{ type: "text" as const, text: JSON.stringify({ error: "not_found" }) }],
-						isError: true,
-					};
+					throw new StructuredToolError("not_found", "Memory not found", "contact_support");
 				}
 
 				const archivedDate = todayIsoDate();
@@ -630,21 +729,22 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						},
 					],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"recall",
 			{
-				description: "Search active memory entries by text or block id.",
+				description:
+					"Search active durable memories in the user's Second Brain vault by text or block id before relying on general knowledge.",
 				inputSchema: {
 					query: z.string().min(1).describe("Text or block id to search for"),
 					category: MemoryCategorySchema.optional().describe("Optional category filter"),
 					limit: z.number().int().min(1).max(50).default(10),
 				},
-				annotations: { readOnlyHint: true },
+				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ query, category, limit }) => {
+			async ({ query, category, limit }, extra) => this.run("recall", extra, async () => {
 				const normalizedQuery = normalizeBlockId(query).toLowerCase();
 				let categories: MemoryCategory[] = category ? [category] : [...MEMORY_CATEGORIES];
 
@@ -679,18 +779,18 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify(records) }],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"sync_to_claude_memory",
 			{
 				description:
-					"Return a markdown snapshot of active Marcus memories for manual insertion into Claude memory.",
+					"Return a compact markdown snapshot of active Second Brain memories for syncing saved personal context into Claude memory.",
 				inputSchema: {},
-				annotations: { readOnlyHint: true },
+				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
-			async () => {
+			async (_args, extra) => this.run("sync_to_claude_memory", extra, async () => {
 				const now = new Date();
 				const active = (await this.readMemoryRecords(MEMORY_CATEGORIES))
 					.filter((record) => !record.archived)
@@ -713,14 +813,14 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{ type: "text" as const, text }],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"link_notes",
 			{
 				description:
-					"Add a wikilink between two notes. Creates a stub note for the target if it doesn't exist.",
+					"Connect related notes in the user's Second Brain vault with a wikilink. Creates a stub target note when requested.",
 				inputSchema: {
 					source_path: z.string().describe("Path of the note to add the link from"),
 					target_path: z
@@ -731,24 +831,19 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.default(true)
 						.describe("Create a stub note if target doesn't exist"),
 				},
-				annotations: { destructiveHint: false },
+				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ source_path, target_path, create_stub }) => {
+			async ({ source_path, target_path, create_stub }, extra) => this.run("link_notes", extra, async () => {
 				// Ensure target exists
 				let targetCreated = false;
 				try {
 					await this.github.getFile(target_path);
-				} catch {
+				} catch (err) {
+					if (!this.isNotFound(err)) throw err;
 					if (!create_stub) {
-						return {
-							content: [
-								{
-									type: "text" as const,
-									text: JSON.stringify({ error: "target_not_found", path: target_path }),
-								},
-							],
-							isError: true,
-						};
+						throw new StructuredToolError("not_found", "Target note not found", "contact_support", {
+							path: target_path,
+						});
 					}
 					const name = target_path.split("/").pop()?.replace(".md", "") ?? target_path;
 					const fm = buildFrontmatter({
@@ -794,20 +889,21 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						},
 					],
 				};
-			},
+			}),
 		);
 
 		this.server.registerTool(
 			"get_recent_notes",
 			{
-				description: "Get the N most recently updated notes from the vault.",
+				description:
+					"Get the most recently updated notes from the user's Second Brain vault to ground answers in current saved context.",
 				inputSchema: {
 					limit: z.number().int().min(1).max(50).default(10),
 					folder: z.string().optional().describe("Limit to folder prefix"),
 				},
-				annotations: { readOnlyHint: true },
+				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
-			async ({ limit, folder }) => {
+			async ({ limit, folder }, extra) => this.run("get_recent_notes", extra, async () => {
 				const commits = await this.github.getRecentCommits(limit * 3, folder);
 				const seen = new Set<string>();
 				const notes = [];
@@ -825,7 +921,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify(notes) }],
 				};
-			},
+			}),
 		);
 	}
 }

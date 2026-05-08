@@ -1,4 +1,4 @@
-# Marcus - Auto Second Brain: Project Workspace
+# Marcus - Second Brain: Project Workspace
 
 Полный архив проекта Marcus. Экспортирован из чата 26 апреля 2026, реструктурирован 6 мая 2026.
 

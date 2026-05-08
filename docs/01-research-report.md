@@ -271,7 +271,7 @@ Secondary candidates likely available (нужен WHOIS confirmation):
 3. **`thesecondbrain.io` homepage tagline литерально "The AI Knowledge Base That Actually Works"** - near-identical concept уже в market
 
 Recommended replacements (по силе):
-- **"Marcus - Auto Second Brain"** ⭐ winner
+- **"Marcus - Second Brain"** ⭐ winner
 - "Marcus - The AI memory for everything you know."
 - "Marcus - your life, indexed."
 

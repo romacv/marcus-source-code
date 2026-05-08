@@ -54,7 +54,7 @@ Secondary likely available:
 
 ## Финальный title/tagline
 
-**"Marcus - Auto Second Brain"**
+**"Marcus - Second Brain"**
 
 Заменили оригинальный "Your AI Knowledge Base of Life".
 

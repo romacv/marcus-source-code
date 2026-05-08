@@ -14,7 +14,7 @@ Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, App
 
 ## Что такое Marcus
 
-**Marcus - Auto Second Brain**
+**Marcus - Second Brain**
 
 Приватная AI-powered база знаний жизни. Юзер записывает все (заметки, дневник, фото-саммари), хранится в его собственном приватном GitHub репозитории как связанные .md файлы.
 
@@ -49,7 +49,7 @@ Senior iOS Software Developer, 14+ лет опыта (Swift, SwiftUI, UIKit, App
 
 ### Brand
 - Название - **Marcus** (filed как stylized или compound, не bare word)
-- Title/tagline - **"Marcus - Auto Second Brain"**
+- Title/tagline - **"Marcus - Second Brain"**
 - Trademark scope - Classes 9 + 42, US first, нужен attorney
 - **Никогда** не использовать "Building a Second Brain" anywhere (Forte Labs trademark)
 - **Никогда** не делать "Second Brain" legal product name
