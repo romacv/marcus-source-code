@@ -165,7 +165,7 @@ app.get("/vault/install", async (c) => {
 	const content = html`
     <section class="hero" style="grid-template-columns:1fr;max-width:680px;margin-inline:auto;text-align:center">
       <div class="hero__copy">
-        <h1>Almost there</h1>
+        <h1>One last step</h1>
         <p class="lede">Marcus has created your private vault. One last step: install the app on it so it can read &amp; write your notes.</p>
       </div>
     </section>
