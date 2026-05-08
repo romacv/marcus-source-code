@@ -246,11 +246,14 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		installationId,
 		login,
 		VAULT_REPO_NAME,
+		env.MARCUS_KV,
+		env.KV_ENCRYPTION_KEY,
 	);
 
 	// Skip if already seeded
 	try {
 		await gh.getFile("_marcus/version.txt");
+		console.log("[seed-vault]", JSON.stringify({ login, result: "skipped", reason: "sentinel" }));
 		return;
 	} catch {
 		// not seeded yet
@@ -260,6 +263,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		const tree = await gh.listTree("");
 		const unrelated = findUnrelatedVaultEntries(tree);
 		if (unrelated.length > 0) {
+			console.log("[seed-vault]", JSON.stringify({ login, result: "refused", reason: "unrelated_content", unrelated: unrelated.slice(0, 3) }));
 			throw new StructuredToolError(
 				"conflict",
 				`Refusing to seed vault: repo contains unrelated content (${unrelated.slice(0, 3).join(", ")}). Rename/delete it or use an empty repository.`,
@@ -296,6 +300,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		].join("\n"),
 		VAULT_SEED_FILES,
 	);
+	console.log("[seed-vault]", JSON.stringify({ login, result: "seeded" }));
 }
 
 export default app;

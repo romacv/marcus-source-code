@@ -137,6 +137,8 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 			this.props.installationId,
 			this.props.githubLogin,
 			this.props.repoName,
+			this.env.MARCUS_KV,
+			this.env.KV_ENCRYPTION_KEY,
 		);
 	}
 

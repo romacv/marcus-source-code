@@ -71,12 +71,16 @@ export async function marcusVaultExists(userToken: string, login: string): Promi
 	const repoRes = await fetch(`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}`, {
 		headers: githubHeaders(userToken),
 	});
-	if (!repoRes.ok) return false;
+	if (!repoRes.ok) {
+		console.log("[marcus-vault-exists]", JSON.stringify({ login, repoExists: false, sentinelExists: false, result: false }));
+		return false;
+	}
 
 	const sentinelRes = await fetch(
 		`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}/contents/_marcus/version.txt`,
 		{ headers: githubHeaders(userToken) },
 	);
+	console.log("[marcus-vault-exists]", JSON.stringify({ login, repoExists: true, sentinelExists: sentinelRes.ok, result: sentinelRes.ok }));
 	return sentinelRes.ok;
 }
 
@@ -163,4 +167,5 @@ export async function provisionVault(userToken: string, login: string): Promise<
 	if (gqlData.errors) {
 		throw new Error(`GraphQL vault seed failed: ${JSON.stringify(gqlData.errors)}`);
 	}
+	console.log("[provision-vault]", JSON.stringify({ login, ok: true, repoCreated: true, seeded: true }));
 }

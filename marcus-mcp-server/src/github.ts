@@ -1,5 +1,6 @@
 import { createPrivateKey, createSign } from "node:crypto";
 import { mapGitHubError, StructuredToolError } from "./errors.ts";
+import { getCachedInstallationToken, setCachedInstallationToken } from "./github-token-cache.ts";
 import { parseFrontmatter } from "./vault.ts";
 
 const GITHUB_API = "https://api.github.com";
@@ -72,8 +73,7 @@ function signAppJwt(clientId: string, privateKeyPem: string): string {
 }
 
 export class GitHubClient {
-	private installationToken: string | null = null;
-	private tokenExpiry = 0;
+	private _cachedToken: string | null = null;
 	private treeCache = new Map<string, TreeCacheEntry>();
 	private readonly privateKeyPem: string;
 	private readonly appId: string;
@@ -81,6 +81,8 @@ export class GitHubClient {
 	private readonly installationId: string;
 	private readonly owner: string;
 	private readonly repo: string;
+	private readonly kv: KVNamespace;
+	private readonly encryptionKey: string;
 
 	constructor(
 		privateKeyPem: string,
@@ -89,6 +91,8 @@ export class GitHubClient {
 		installationId: string,
 		owner: string,
 		repo: string,
+		kv: KVNamespace,
+		encryptionKey: string,
 	) {
 		this.privateKeyPem = privateKeyPem;
 		this.appId = appId;
@@ -96,12 +100,19 @@ export class GitHubClient {
 		this.installationId = installationId;
 		this.owner = owner;
 		this.repo = repo;
+		this.kv = kv;
+		this.encryptionKey = encryptionKey;
 	}
 
 	private async getToken(): Promise<string> {
-		if (this.installationToken && Date.now() < this.tokenExpiry) {
-			return this.installationToken;
+		if (this._cachedToken) return this._cachedToken;
+
+		const cached = await getCachedInstallationToken(this.kv, this.encryptionKey, this.installationId);
+		if (cached) {
+			this._cachedToken = cached;
+			return cached;
 		}
+
 		const jwt = signAppJwt(this.clientId, this.privateKeyPem);
 		console.log("[app-jwt]", { iss_prefix: this.clientId.slice(0, 6), installationId: this.installationId, exp_in_s: 600 });
 		const res = await fetch(
@@ -122,9 +133,9 @@ export class GitHubClient {
 			throw mapGitHubError(res.status, res.headers, body);
 		}
 		const data = (await res.json()) as { token: string; expires_at: string };
-		this.installationToken = data.token;
-		this.tokenExpiry = new Date(data.expires_at).getTime() - 60_000;
-		return this.installationToken;
+		await setCachedInstallationToken(this.kv, this.encryptionKey, this.installationId, data.token, data.expires_at);
+		this._cachedToken = data.token;
+		return data.token;
 	}
 
 	private async api(path: string, opts: RequestInit = {}): Promise<Response> {
