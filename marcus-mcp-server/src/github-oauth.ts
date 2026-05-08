@@ -67,11 +67,17 @@ export async function findInstallationForApp(
 	return found ? String(found.id) : null;
 }
 
-export async function vaultExists(userToken: string, login: string): Promise<boolean> {
-	const res = await fetch(`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}`, {
+export async function marcusVaultExists(userToken: string, login: string): Promise<boolean> {
+	const repoRes = await fetch(`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}`, {
 		headers: githubHeaders(userToken),
 	});
-	return res.ok;
+	if (!repoRes.ok) return false;
+
+	const sentinelRes = await fetch(
+		`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}/contents/_marcus/version.txt`,
+		{ headers: githubHeaders(userToken) },
+	);
+	return sentinelRes.ok;
 }
 
 // Creates marcus-auto-second-brain repo and seeds it with folder structure.

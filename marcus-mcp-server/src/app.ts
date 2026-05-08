@@ -1,6 +1,7 @@
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
 import { raw } from "hono/html";
+import { StructuredToolError } from "./errors.ts";
 import type { MarcusEnv } from "./index";
 import { encryptForKv, hmacSign, hmacVerify } from "./crypto";
 import { GitHubClient } from "./github";
@@ -8,10 +9,11 @@ import {
 	exchangeCodeForUserToken,
 	findInstallationForApp,
 	getAuthenticatedUser,
+	marcusVaultExists,
 	provisionVault,
-	vaultExists,
 } from "./github-oauth";
 import { homeContent, layout } from "./utils";
+import { findUnrelatedVaultEntries } from "./vault-guard.ts";
 import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
 
 export type Bindings = MarcusEnv & {
@@ -136,7 +138,7 @@ app.get("/auth/github/callback", async (c) => {
 	const phase2State = btoa(phase2Payload) + "." + phase2Sig;
 
 	const installPagePath = `/vault/install?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`;
-	if (await vaultExists(userToken, user.login)) {
+	if (await marcusVaultExists(userToken, user.login)) {
 		return c.redirect(installPagePath);
 	}
 
@@ -144,6 +146,10 @@ app.get("/auth/github/callback", async (c) => {
 		await provisionVault(userToken, user.login);
 		return c.redirect(installPagePath);
 	} catch (error) {
+		const message = String(error);
+		if (message.includes("422")) {
+			return c.redirect(`/vault/conflict?login=${encodeURIComponent(user.login)}`);
+		}
 		console.warn("[provision-vault] fallback to setup page", String(error).slice(0, 300));
 		return c.redirect(`/vault/setup?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`);
 	}
@@ -209,6 +215,25 @@ app.get("/vault/setup", (c) => {
 	return c.html(layout(content, "Marcus — Create your vault"));
 });
 
+app.get("/vault/conflict", (c) => {
+	const login = c.req.query("login") ?? "";
+	const settingsUrl = `https://github.com/${login}/${VAULT_REPO_NAME}/settings`;
+	const reconnectUrl = "/authorize";
+	const content = raw(
+		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
+			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">Vault name conflict</h1>
+			<p style="color:var(--muted);margin-bottom:1.5rem">Marcus found a repository named <strong style="color:var(--text)">${VAULT_REPO_NAME}</strong>, but it does not look like a Marcus vault.</p>
+			<p style="color:var(--muted);margin-bottom:2rem">To avoid writing Marcus files into unrelated content, rename or delete that repository first, then reconnect.</p>
+			<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem">
+				<a href="${settingsUrl}" target="_blank" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none">Open repository settings ↗</a>
+				<a href="${reconnectUrl}" style="display:inline-block;padding:.75rem 1.5rem;border:1px solid var(--hair);color:var(--text);border-radius:6px;text-decoration:none">Try again</a>
+			</div>
+			<p style="color:var(--subtle);font-size:.8rem">Conflicting repo: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
+		</div>`,
+	);
+	return c.html(layout(content, "Marcus — Vault conflict"));
+});
+
 app.get("/version", (c) => c.json({ version: "0.2.0", sha: "local-dev" }));
 
 // Seeds vault folder structure via installation token (Contents R+W).
@@ -229,6 +254,22 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		return;
 	} catch {
 		// not seeded yet
+	}
+
+	try {
+		const tree = await gh.listTree("");
+		const unrelated = findUnrelatedVaultEntries(tree);
+		if (unrelated.length > 0) {
+			throw new StructuredToolError(
+				"conflict",
+				`Refusing to seed vault: repo contains unrelated content (${unrelated.slice(0, 3).join(", ")}). Rename/delete it or use an empty repository.`,
+				"contact_support",
+			);
+		}
+	} catch (error) {
+		if (error instanceof StructuredToolError && error.code === "conflict") {
+			throw error;
+		}
 	}
 
 	// Empty repo (no commits / no main branch) — bootstrap via Contents API,

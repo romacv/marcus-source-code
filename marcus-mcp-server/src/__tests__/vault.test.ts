@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { provisionVault } from "../github-oauth.ts";
+import { marcusVaultExists, provisionVault } from "../github-oauth.ts";
+import { findUnrelatedVaultEntries } from "../vault-guard.ts";
 import { buildFrontmatter, extractAutoTags, parseFrontmatter } from "../vault.ts";
 
 test("extractAutoTags returns existing tags unchanged", () => {
@@ -83,4 +84,68 @@ test("provisionVault creates the repo, bootstraps main, and seeds the rest atomi
 	};
 	assert.equal(graphQlBody.variables.input.expectedHeadOid, "bootstrap-sha");
 	assert.ok(graphQlBody.variables.input.fileChanges.additions.length > 0);
+});
+
+test("marcusVaultExists returns false when repo is missing", async () => {
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = (async () =>
+		new Response(JSON.stringify({ message: "Not Found" }), { status: 404 })) as typeof fetch;
+
+	try {
+		const exists = await marcusVaultExists("gho_test", "romacv");
+		assert.equal(exists, false);
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
+});
+
+test("marcusVaultExists returns false when sentinel file is missing", async () => {
+	const originalFetch = globalThis.fetch;
+	let callIndex = 0;
+	globalThis.fetch = (async () => {
+		callIndex += 1;
+		if (callIndex === 1) {
+			return new Response(JSON.stringify({ id: 1 }), { status: 200 });
+		}
+		return new Response(JSON.stringify({ message: "Not Found" }), { status: 404 });
+	}) as typeof fetch;
+
+	try {
+		const exists = await marcusVaultExists("gho_test", "romacv");
+		assert.equal(exists, false);
+		assert.equal(callIndex, 2);
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
+});
+
+test("marcusVaultExists returns true when sentinel file exists", async () => {
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = (async () =>
+		new Response(JSON.stringify({ id: 1 }), { status: 200 })) as typeof fetch;
+
+	try {
+		const exists = await marcusVaultExists("gho_test", "romacv");
+		assert.equal(exists, true);
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
+});
+
+test("findUnrelatedVaultEntries returns empty for expected vault paths", () => {
+	const unrelated = findUnrelatedVaultEntries([
+		{ path: "_marcus/version.txt" },
+		{ path: "00-daily/.gitkeep" },
+		{ path: "README.md" },
+	]);
+	assert.deepEqual(unrelated, []);
+});
+
+test("findUnrelatedVaultEntries returns top-level unrelated entries", () => {
+	const unrelated = findUnrelatedVaultEntries([
+		{ path: "_marcus/version.txt" },
+		{ path: "legacy.md" },
+		{ path: "random-folder/note.md" },
+	]);
+	assert.deepEqual(unrelated.sort(), ["legacy.md", "random-folder"]);
 });
