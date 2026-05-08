@@ -1,77 +1,70 @@
-# Remote MCP Server on Cloudflare
+# marcus-mcp-server
 
-Let's get a remote MCP server up-and-running on Cloudflare Workers complete with OAuth login!
+Cloudflare Worker that powers [Marcus — Your Automatic Second Brain](https://marcus-mcp-server.r-df5.workers.dev).
+It exposes a remote MCP endpoint over Streamable HTTP at `/mcp`, brokers GitHub
+OAuth + GitHub App installation, and writes notes directly to a per-user
+private vault repo (`marcus-second-brain-vault`) using short-lived
+installation tokens.
+
+The worker itself is contentless — note bodies pass straight from the MCP
+client to the user's GitHub repo. The only persistent state on the worker is
+the OAuth provider's KV namespace.
+
+## Repo layout
+
+- `src/index.ts` — `MarcusMCP` agent, tool registration, MCP routing (`/mcp`).
+- `src/app.ts` — Hono app: home page, `/authorize`, `/auth/github/callback`,
+  `/vault/install`, `/vault/conflict`, `/vault/setup`.
+- `src/github-oauth.ts` — OAuth + GitHub App handlers, `provisionVault`,
+  `marcusVaultExists`.
+- `src/vault.ts` — Vault constants (`VAULT_REPO_NAME`, seed files, frontmatter
+  parser, daily-note path helpers).
+- `src/utils.ts` — Landing-page HTML + shared layout.
+- `static/` — Static assets and the user-facing README served at `/docs`.
 
 ## Develop locally
 
 ```bash
-# clone the repository
-git clone https://github.com/cloudflare/ai.git
-# Or if using ssh:
-# git clone git@github.com:cloudflare/ai.git
-
-# install dependencies
-cd ai
-# Note: using pnpm instead of just "npm"
-pnpm install
-
-# run locally
-npx nx dev remote-mcp-server
+npm install
+npm run dev
 ```
 
-You should be able to open [`http://localhost:8787/`](http://localhost:8787/) in your browser
+Open [`http://localhost:8787/`](http://localhost:8787/) for the landing page.
+The MCP endpoint is at `http://localhost:8787/mcp`.
 
-## Connect the MCP inspector to your server
+### Connect the MCP inspector
 
-To explore your new MCP api, you can use the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector).
+```bash
+npx @modelcontextprotocol/inspector
+```
 
-- Start it with `npx @modelcontextprotocol/inspector`
-- [Within the inspector](http://localhost:5173), switch the Transport Type to `SSE` and enter `http://localhost:8787/sse` as the URL of the MCP server to connect to, and click "Connect"
-- You will navigate to a (mock) user/password login screen. Input any email and pass to login.
-- You should be redirected back to the MCP Inspector and you can now list and call any defined tools!
+In the inspector, set Transport Type to **Streamable HTTP** and enter
+`http://localhost:8787/mcp` as the URL. Click **Connect** and complete the
+GitHub OAuth flow.
 
-<div align="center">
-  <img src="img/mcp-inspector-sse-config.png" alt="MCP Inspector with the above config" width="600"/>
-</div>
+### Connect Claude Desktop to your local worker
 
-<div align="center">
-  <img src="img/mcp-inspector-successful-tool-call.png" alt="MCP Inspector with after a tool call" width="600"/>
-</div>
-
-## Connect Claude Desktop to your local MCP server
-
-The MCP inspector is great, but we really want to connect this to Claude! Follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config to find your configuration file.
-
-Open the file in your text editor and replace it with this configuration:
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
+(macOS) and add:
 
 ```json
 {
-	"mcpServers": {
-		"math": {
-			"command": "npx",
-			"args": ["mcp-remote", "http://localhost:8787/sse"]
-		}
-	}
+  "mcpServers": {
+    "marcus": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8787/mcp"]
+    }
+  }
 }
 ```
 
-This will run a local proxy and let Claude talk to your MCP server over HTTP
-
-When you open Claude a browser window should open and allow you to login. You should see the tools available in the bottom right. Given the right prompt Claude should ask to call the tool.
-
-<div align="center">
-  <img src="img/available-tools.png" alt="Clicking on the hammer icon shows a list of available tools" width="600"/>
-</div>
-
-<div align="center">
-  <img src="img/claude-does-math-the-fancy-way.png" alt="Claude answers the prompt 'I seem to have lost my calculator and have run out of fingers. Could you use the math tool to add 23 and 19?' by invoking the MCP add tool" width="600"/>
-</div>
+Restart Claude Desktop. Sign in with GitHub when the browser window opens.
 
 ## Deploy to Cloudflare
 
 1. `npx wrangler kv namespace create OAUTH_KV`
 2. Follow the guidance to add the kv namespace ID to `wrangler.jsonc`
-3. Set the required GitHub secrets:
+3. Set the required secrets:
    - `wrangler secret put GITHUB_APP_CLIENT_ID`
    - `wrangler secret put GITHUB_APP_ID`
    - `wrangler secret put GITHUB_APP_PRIVATE_KEY`
@@ -106,30 +99,29 @@ see both names during the connect flow (OAuth consent screen shows
 Second Brain*). To unify them, rename the GitHub App at the URL above —
 the OAuth App slug/URL stays the same.
 
-## Call your newly deployed remote MCP server from a remote MCP client
+## Connect a remote MCP client to the deployed worker
 
-Just like you did above in "Develop locally", run the MCP inspector:
+Point any MCP client at the deployed worker's `/mcp` endpoint:
 
-`npx @modelcontextprotocol/inspector@latest`
+```
+https://marcus-mcp-server.r-df5.workers.dev/mcp
+```
 
-Then enter the `workers.dev` URL (ex: `worker-name.account-name.workers.dev/sse`) of your Worker in the inspector as the URL of the MCP server to connect to, and click "Connect".
-
-You've now connected to your MCP server from a remote MCP client.
-
-## Connect Claude Desktop to your remote MCP server
-
-Update the Claude configuration file to point to your `workers.dev` URL (ex: `worker-name.account-name.workers.dev/sse`) and restart Claude
+For Claude Desktop pointed at production:
 
 ```json
 {
-	"mcpServers": {
-		"math": {
-			"command": "npx",
-			"args": ["mcp-remote", "https://worker-name.account-name.workers.dev/sse"]
-		}
-	}
+  "mcpServers": {
+    "marcus": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://marcus-mcp-server.r-df5.workers.dev/mcp"]
+    }
+  }
 }
 ```
+
+For Claude.ai, follow the in-product flow described in the user-facing
+README at [`static/README.md`](./static/README.md) (also served at `/docs`).
 
 ## Test the new-user flow end-to-end
 
@@ -296,7 +288,7 @@ Should anything go wrong it can be helpful to restart Claude, or to try connecti
 MCP server on the command line with the following command.
 
 ```bash
-npx mcp-remote http://localhost:8787/sse
+npx mcp-remote http://localhost:8787/mcp
 ```
 
 In some rare cases it may help to clear the files added to `~/.mcp-auth`

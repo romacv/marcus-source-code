@@ -28,7 +28,7 @@ Give it a name (e.g. **Marcus Second Brain**) and click **Add**.
 
 ### Step 3. Authorize with GitHub
 
-A popup will open asking you to sign in with GitHub. Marcus will create a private `marcus-vault` repository in your account and install itself with read/write access to that repo only.
+A popup will open asking you to sign in with GitHub. Marcus will create a private `marcus-second-brain-vault` repository in your account and install itself with read/write access to that repo only.
 
 ### Step 4. Start using Marcus in chat
 
