@@ -147,6 +147,18 @@ export class GitHubClient {
 		return res;
 	}
 
+	async branchExists(branch: string): Promise<boolean> {
+		try {
+			await this.api(`/repos/${this.owner}/${this.repo}/git/ref/heads/${branch}`);
+			return true;
+		} catch (e) {
+			if (e instanceof StructuredToolError && (e.code === "not_found" || e.code === "conflict")) {
+				return false;
+			}
+			throw e;
+		}
+	}
+
 	async getFile(path: string): Promise<FileResult> {
 		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`);
 		const data = (await res.json()) as { sha: string; content: string; encoding: string };

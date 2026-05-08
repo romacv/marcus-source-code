@@ -202,6 +202,18 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		// not seeded yet
 	}
 
+	// Empty repo (no commits / no main branch) — bootstrap via Contents API,
+	// which creates the default branch with the first commit. Without this,
+	// createCommitOnBranch's git/ref/heads/main lookup returns 409
+	// "Git Repository is empty."
+	if (!(await gh.branchExists("main"))) {
+		await gh.createFile(
+			"README.md",
+			"# Marcus Second Brain\n\nManaged by [Marcus](https://marcus-mcp-server.r-df5.workers.dev).\n",
+			"marcus-mcp-server: bootstrap vault",
+		);
+	}
+
 	// Seed in one atomic commit
 	await gh.createCommitOnBranch(
 		"main",
