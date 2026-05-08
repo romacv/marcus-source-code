@@ -150,8 +150,8 @@ app.get("/auth/github/callback", async (c) => {
 		if (message.includes("422")) {
 			return c.redirect(`/vault/conflict?login=${encodeURIComponent(user.login)}`);
 		}
-		console.warn("[provision-vault] fallback to setup page", String(error).slice(0, 300));
-		return c.redirect(`/vault/setup?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`);
+		console.warn("[provision-vault] redirecting to error page", String(error).slice(0, 300));
+		return c.redirect("/vault/error");
 	}
 });
 
@@ -195,6 +195,21 @@ app.get("/vault/install", async (c) => {
 app.get("/vault/setup", (c) => {
 	const qs = new URL(c.req.url).search;
 	return c.redirect(`/vault/install${qs}`, 302);
+});
+
+app.get("/vault/error", (c) => {
+	const reconnectUrl = "/authorize";
+	const content = raw(
+		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
+			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">Vault setup failed</h1>
+			<p style="color:var(--muted);margin-bottom:1.5rem">Marcus could not create your private vault repository.</p>
+			<p style="color:var(--muted);margin-bottom:2rem">Please try again. If it keeps failing, check that your GitHub account has permission to create repositories.</p>
+			<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem">
+				<a href="${reconnectUrl}" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none">Try again</a>
+			</div>
+		</div>`,
+	);
+	return c.html(layout(content, "Marcus — Vault setup failed"));
 });
 
 app.get("/vault/conflict", (c) => {
