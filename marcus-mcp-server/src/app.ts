@@ -276,17 +276,20 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		}
 	}
 
+	const readmeFile = VAULT_SEED_FILES.find((f) => f.path === "README.md");
+
 	// Empty repo (no commits / no main branch) — bootstrap via Contents API,
 	// which creates the default branch with the first commit. Without this,
 	// createCommitOnBranch's git/ref/heads/main lookup returns 409
 	// "Git Repository is empty."
-	if (!(await gh.branchExists("main"))) {
-		await gh.createFile(
-			"README.md",
-			"# Marcus Second Brain\n\nManaged by [Marcus](https://marcus-mcp-server.r-df5.workers.dev).\n",
-			"marcus-mcp-server: bootstrap vault",
-		);
+	const branchExisted = await gh.branchExists("main");
+	if (!branchExisted && readmeFile) {
+		await gh.createFile(readmeFile.path, readmeFile.content, "marcus-mcp-server: bootstrap vault");
 	}
+
+	const seedAdditions = branchExisted
+		? VAULT_SEED_FILES
+		: VAULT_SEED_FILES.filter((f) => f.path !== "README.md");
 
 	// Seed in one atomic commit
 	await gh.createCommitOnBranch(
@@ -298,7 +301,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 			"Via: GitHub App installation",
 			"Folders: 00-daily, 10-journal, 20-topics, 30-people, 40-projects, 50-resources, 60-photos, 90-archive",
 		].join("\n"),
-		VAULT_SEED_FILES,
+		seedAdditions,
 	);
 	console.log("[seed-vault]", JSON.stringify({ login, result: "seeded" }));
 }

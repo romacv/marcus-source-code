@@ -28,7 +28,43 @@ function titleCase(value: string): string {
 	return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
 
+const README_CONTENT = `# Marcus — Your Second Brain
+
+Your personal vault, managed by [Marcus](https://marcus-mcp-server.r-df5.workers.dev).
+Talk to it from Claude using the Marcus connector — every note here was
+written by you (or by Claude on your behalf).
+
+## Folders
+
+- [\`00-daily/\`](./00-daily/) — Daily notes, organized as \`YYYY/MM/YYYY-MM-DD.md\`
+- [\`10-journal/\`](./10-journal/) — Longer journal entries
+- [\`15-memory/\`](./15-memory/) — Long-term memory by category
+  - [hardware](./15-memory/hardware.md) · [finance](./15-memory/finance.md) · [health](./15-memory/health.md) · [work](./15-memory/work.md) · [travel](./15-memory/travel.md) · [personal](./15-memory/personal.md) · [decisions](./15-memory/decisions.md) · [_archive](./15-memory/_archive.md)
+- [\`20-topics/\`](./20-topics/) — Topic-organized notes
+- [\`30-people/\`](./30-people/) — Notes about people
+- [\`40-projects/\`](./40-projects/) — Projects
+- [\`50-resources/\`](./50-resources/) — Reference resources, links, clippings
+- [\`60-photos/\`](./60-photos/) — Photos
+- [\`90-archive/\`](./90-archive/) — Archived notes
+
+## Other files
+
+- [\`index.md\`](./index.md) — Vault index
+- [\`_marcus/\`](./_marcus/) — Marcus internal metadata (do not edit)
+
+## How to use
+
+- **Capture a memory**: *"Remember that I prefer dark mode"* → \`15-memory/personal.md\`
+- **Daily log**: *"Add to today: shipped feature X"* → appends to today's daily note
+- **Recall**: *"What did I write about Foo last week?"* → semantic search across the vault
+- **Browse**: open any folder above on GitHub to read your notes directly
+
+> This README is generated on first connect. Edit freely — Marcus will not
+> overwrite it.
+`;
+
 export const VAULT_SEED_FILES: Array<{ path: string; content: string }> = [
+	{ path: "README.md", content: README_CONTENT },
 	{ path: "00-daily/.gitkeep", content: "" },
 	{ path: "10-journal/.gitkeep", content: "" },
 	...MEMORY_CATEGORIES.map((category) => ({
@@ -45,7 +81,7 @@ export const VAULT_SEED_FILES: Array<{ path: string; content: string }> = [
 	{ path: "_marcus/version.txt", content: "1" },
 	{
 		path: "index.md",
-		content: "# Marcus Vault\n\nYour personal second brain. Managed by [Marcus](https://marcus-mcp-server.r-df5.workers.dev).\n",
+		content: "# Marcus Vault\n\nYour personal second brain. Managed by [Marcus](https://marcus-mcp-server.r-df5.workers.dev). See [README.md](./README.md) for navigation.\n",
 	},
 ];
 
