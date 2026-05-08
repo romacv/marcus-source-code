@@ -135,18 +135,43 @@ app.get("/auth/github/callback", async (c) => {
 	const phase2Sig = await hmacSign(c.env.KV_ENCRYPTION_KEY, phase2Payload);
 	const phase2State = btoa(phase2Payload) + "." + phase2Sig;
 
-	const installUrl = `https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`;
+	const installPagePath = `/vault/install?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`;
 	if (await vaultExists(userToken, user.login)) {
-		return c.redirect(installUrl);
+		return c.redirect(installPagePath);
 	}
 
 	try {
 		await provisionVault(userToken, user.login);
-		return c.redirect(installUrl);
+		return c.redirect(installPagePath);
 	} catch (error) {
 		console.warn("[provision-vault] fallback to setup page", String(error).slice(0, 300));
 		return c.redirect(`/vault/setup?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`);
 	}
+});
+
+// Intermediate page shown between vault provisioning and GitHub's install screen.
+// Previews the 3 clicks the user must perform on GitHub's hosted install page.
+app.get("/vault/install", (c) => {
+	const state = c.req.query("state") ?? "";
+	const login = c.req.query("login") ?? "";
+	const installUrl = `https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?state=${encodeURIComponent(state)}`;
+
+	const content = raw(
+		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
+			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">Almost there</h1>
+			<p style="color:var(--muted);margin-bottom:2rem">Marcus has created your private vault. One last step: install the app on it so it can read &amp; write your notes.</p>
+			<ol style="color:var(--muted);padding-left:1.25rem;margin-bottom:2rem;line-height:2">
+				<li>On the next screen, choose <strong style="color:var(--text)">Only select repositories</strong></li>
+				<li>Click the <strong style="color:var(--text)">Select repositories</strong> dropdown</li>
+				<li>Pick <strong style="color:var(--text)">${VAULT_REPO_NAME}</strong> (the one we just created)</li>
+				<li>Click <strong style="color:var(--text)">Install &amp; Authorize</strong></li>
+			</ol>
+			<a href="${installUrl}" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none;margin-bottom:2rem">Continue to GitHub →</a>
+			<p style="color:var(--subtle);font-size:.8rem">Your vault: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
+			<!-- TODO: add annotated screenshot at /img/install-select-repo.png -->
+		</div>`,
+	);
+	return c.html(layout(content, "Marcus — Install on your vault"));
 });
 
 // Intermediate page shown when vault repo doesn't exist yet.
