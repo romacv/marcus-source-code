@@ -192,39 +192,9 @@ app.get("/vault/install", async (c) => {
 	return c.html(layout(await content, "Marcus — Install on your vault"));
 });
 
-// Intermediate page shown when vault repo doesn't exist yet.
-// Guides user to create the repo on GitHub, then continue to App install.
 app.get("/vault/setup", (c) => {
-	const state = c.req.query("state") ?? "";
-	const login = c.req.query("login") ?? "";
-	const appSlug = c.env.GITHUB_APP_SLUG;
-
-	const githubNewRepoUrl = `https://github.com/new?name=${VAULT_REPO_NAME}&visibility=private&description=Marcus+-+Second+Brain+Vault`;
-	const installUrl = `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(state)}`;
-
-	const content = raw(
-		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
-			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">One more step</h1>
-			<p style="color:var(--muted);margin-bottom:2rem">Marcus stores your notes in a private GitHub repository. Create it now — it takes 10 seconds.</p>
-			<ol style="color:var(--muted);padding-left:1.25rem;margin-bottom:2rem;line-height:2">
-				<li>Click <strong style="color:var(--text)">Create Repository</strong> — GitHub will open with the name pre-filled</li>
-				<li>Make sure it's set to <strong style="color:var(--text)">Private</strong></li>
-				<li>Check <strong style="color:var(--text)">Add a README file</strong></li>
-				<li>Click <strong style="color:var(--text)">Create repository</strong> on GitHub</li>
-				<li>Come back here and click <strong style="color:var(--text)">Continue</strong></li>
-			</ol>
-			<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:3rem">
-				<a href="${githubNewRepoUrl}" target="_blank" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none">Create Repository on GitHub ↗</a>
-				<a href="${installUrl}" style="display:inline-block;padding:.75rem 1.5rem;border:1px solid var(--hair);color:var(--text);border-radius:6px;text-decoration:none">I created it, continue →</a>
-			</div>
-			<p style="color:var(--subtle);font-size:.8rem;margin-bottom:3rem">Repo will be: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
-			<hr style="border:0;height:1px;background:var(--hair);margin-bottom:3rem">
-			<h2 style="font-family:var(--f-display);font-size:var(--tx-xl);font-weight:600;margin-bottom:.75rem">After clicking "I created it, continue →"</h2>
-			<p style="color:var(--muted);margin-bottom:1.5rem">GitHub will ask you to authorize Marcus. Select <strong style="color:var(--text)">Only select repositories</strong>, choose <strong style="color:var(--text)">${VAULT_REPO_NAME}</strong> from the dropdown, then click <strong style="color:var(--text)">Install &amp; Authorize</strong>.</p>
-			<img src="/img/install-authorize.png" alt="GitHub Install & Authorize screen" style="width:100%;max-width:480px;border-radius:12px;border:1px solid var(--hair)">
-		</div>`,
-	);
-	return c.html(layout(content, "Marcus — Create your vault"));
+	const qs = new URL(c.req.url).search;
+	return c.redirect(`/vault/install${qs}`, 302);
 });
 
 app.get("/vault/conflict", (c) => {
