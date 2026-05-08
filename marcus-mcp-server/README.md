@@ -127,9 +127,12 @@ gh repo delete romacv/marcus-second-brain-vault --yes
 
 2. Uninstall the GitHub App: <https://github.com/settings/installations>  
    (drops the installation token; forces Phase 2 to re-create one).
-3. Revoke the OAuth App authorization: <https://github.com/settings/apps/authorizations>  
-   (drops the cached `gho_` user-access token; forces a fresh token exchange
-   with `repo` scope).
+3. Revoke the OAuth App authorization: <https://github.com/settings/applications>  
+   (Authorized OAuth Apps tab; find "Marcus — Second Brain" — may be on
+   page 2 — and click Revoke. Drops the cached `gho_` user-access token; forces
+   a fresh token exchange with `repo` scope. The `/settings/apps/authorizations`
+   page is for GitHub Apps and is not needed here — the GitHub App uses a
+   server-to-server installation token, no user-auth cache.)
 
 ### 2. Tail the worker
 
