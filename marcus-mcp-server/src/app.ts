@@ -8,7 +8,6 @@ import {
 	exchangeCodeForUserToken,
 	findInstallationForApp,
 	getAuthenticatedUser,
-	provisionVault,
 	vaultExists,
 } from "./github-oauth";
 import { homeContent, layout } from "./utils";
@@ -135,22 +134,18 @@ app.get("/auth/github/callback", async (c) => {
 	const phase2Sig = await hmacSign(c.env.KV_ENCRYPTION_KEY, phase2Payload);
 	const phase2State = btoa(phase2Payload) + "." + phase2Sig;
 
-	const installRedirect = `https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`;
-
 	// If vault already exists, go straight to install
 	if (await vaultExists(userToken, user.login)) {
-		return c.redirect(installRedirect);
+		return c.redirect(
+			`https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`,
+		);
 	}
 
-	// Vault doesn't exist — auto-provision it with the user OAuth token (repo scope).
-	// Falls back to the manual setup page on failure (e.g., name collision, scope revoked).
-	try {
-		await provisionVault(userToken, user.login);
-		return c.redirect(installRedirect);
-	} catch (e) {
-		console.warn("[provision-vault] auto-provision failed, falling back to setup page", String(e).slice(0, 300));
-		return c.redirect(`/vault/setup?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`);
-	}
+	// Vault doesn't exist — show setup page. Auto-provisioning isn't possible:
+	// our auth identity is a GitHub App (ghu_ token), and GitHub Apps can't
+	// create user-account repos. Would require registering a separate OAuth
+	// App for this step.
+	return c.redirect(`/vault/setup?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`);
 });
 
 // Intermediate page shown when vault repo doesn't exist yet.
