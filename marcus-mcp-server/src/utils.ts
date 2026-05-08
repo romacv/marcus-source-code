@@ -110,6 +110,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				.site-header__inner {
 					display: flex;
 					align-items: center;
+					justify-content: space-between;
 					gap: 1rem;
 					padding-block: 1.125rem;
 				}
@@ -131,9 +132,9 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 
 				.site-logo__word {
 					font-family: var(--f-display);
-					font-style: italic;
 					font-size: 1.4375rem;
 					font-weight: 600;
+					line-height: 1;
 					letter-spacing: -.015em;
 				}
 
