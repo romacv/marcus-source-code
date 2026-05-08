@@ -71,7 +71,18 @@ When you open Claude a browser window should open and allow you to login. You sh
 
 1. `npx wrangler kv namespace create OAUTH_KV`
 2. Follow the guidance to add the kv namespace ID to `wrangler.jsonc`
-3. `npm run deploy`
+3. Set the required GitHub secrets:
+   - `wrangler secret put GITHUB_APP_CLIENT_ID`
+   - `wrangler secret put GITHUB_APP_ID`
+   - `wrangler secret put GITHUB_APP_PRIVATE_KEY`
+   - `wrangler secret put GITHUB_OAUTH_CLIENT_ID`
+   - `wrangler secret put GITHUB_OAUTH_CLIENT_SECRET`
+   - `wrangler secret put KV_ENCRYPTION_KEY`
+4. Register two GitHub integrations that share the same callback URL:
+   - GitHub App: used after installation for ongoing repo contents access.
+   - Classic OAuth App: used for `/authorize`, exchanges a `gho_` token with `repo` scope, and auto-creates the private vault repo before handing off to the GitHub App.
+   - Callback URL: `https://marcus-mcp-server.r-df5.workers.dev/auth/github/callback`
+5. `npm run deploy`
 
 ## Call your newly deployed remote MCP server from a remote MCP client
 
