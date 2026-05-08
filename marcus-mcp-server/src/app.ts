@@ -8,6 +8,7 @@ import {
 	exchangeCodeForUserToken,
 	findInstallationForApp,
 	getAuthenticatedUser,
+	provisionVault,
 	vaultExists,
 } from "./github-oauth";
 import { homeContent, layout } from "./utils";
@@ -37,7 +38,7 @@ app.get("/authorize", async (c) => {
 	const sig = await hmacSign(c.env.KV_ENCRYPTION_KEY, statePayload);
 	const state = btoa(statePayload) + "." + sig;
 
-	const params = new URLSearchParams({ client_id: c.env.GITHUB_CLIENT_ID, scope: "repo", state });
+	const params = new URLSearchParams({ client_id: c.env.GITHUB_OAUTH_CLIENT_ID, scope: "repo", state });
 	return c.redirect(`https://github.com/login/oauth/authorize?${params}`);
 });
 
@@ -134,18 +135,18 @@ app.get("/auth/github/callback", async (c) => {
 	const phase2Sig = await hmacSign(c.env.KV_ENCRYPTION_KEY, phase2Payload);
 	const phase2State = btoa(phase2Payload) + "." + phase2Sig;
 
-	// If vault already exists, go straight to install
+	const installUrl = `https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`;
 	if (await vaultExists(userToken, user.login)) {
-		return c.redirect(
-			`https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?${new URLSearchParams({ state: phase2State })}`,
-		);
+		return c.redirect(installUrl);
 	}
 
-	// Vault doesn't exist — show setup page. Auto-provisioning isn't possible:
-	// our auth identity is a GitHub App (ghu_ token), and GitHub Apps can't
-	// create user-account repos. Would require registering a separate OAuth
-	// App for this step.
-	return c.redirect(`/vault/setup?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`);
+	try {
+		await provisionVault(userToken, user.login);
+		return c.redirect(installUrl);
+	} catch (error) {
+		console.warn("[provision-vault] fallback to setup page", String(error).slice(0, 300));
+		return c.redirect(`/vault/setup?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`);
+	}
 });
 
 // Intermediate page shown when vault repo doesn't exist yet.
@@ -191,7 +192,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 	const gh = new GitHubClient(
 		env.GITHUB_APP_PRIVATE_KEY,
 		env.GITHUB_APP_ID,
-		env.GITHUB_CLIENT_ID,
+		env.GITHUB_APP_CLIENT_ID,
 		installationId,
 		login,
 		VAULT_REPO_NAME,
