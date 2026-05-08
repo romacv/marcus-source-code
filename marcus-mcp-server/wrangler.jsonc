@@ -34,9 +34,9 @@
 			"id": "e23144513e334331956d255c6bc766a4"
 		}
 	],
-	// Secrets set via: wrangler secret put GITHUB_CLIENT_ID, etc.
-	// Required: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_APP_ID,
-	//           GITHUB_APP_PRIVATE_KEY, KV_ENCRYPTION_KEY
+	// Secrets set via: wrangler secret put GITHUB_APP_CLIENT_ID, etc.
+	// Required: GITHUB_APP_CLIENT_ID, GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY,
+	//           GITHUB_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_SECRET, KV_ENCRYPTION_KEY
 	"observability": {
 		"enabled": true
 	},

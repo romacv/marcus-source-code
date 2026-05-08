@@ -29,11 +29,12 @@ import {
 
 export type MarcusEnv = Cloudflare.Env & {
 	MARCUS_KV: KVNamespace;
-	GITHUB_CLIENT_ID: string;
-	GITHUB_CLIENT_SECRET: string;
+	GITHUB_APP_CLIENT_ID: string;
 	GITHUB_APP_ID: string;
 	GITHUB_APP_SLUG: string;
 	GITHUB_APP_PRIVATE_KEY: string;
+	GITHUB_OAUTH_CLIENT_ID: string;
+	GITHUB_OAUTH_CLIENT_SECRET: string;
 	KV_ENCRYPTION_KEY: string;
 };
 
@@ -132,7 +133,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 		return new GitHubClient(
 			this.env.GITHUB_APP_PRIVATE_KEY,
 			this.env.GITHUB_APP_ID,
-			this.env.GITHUB_CLIENT_ID,
+			this.env.GITHUB_APP_CLIENT_ID,
 			this.props.installationId,
 			this.props.githubLogin,
 			this.props.repoName,

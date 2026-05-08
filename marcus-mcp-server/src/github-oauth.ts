@@ -1,10 +1,10 @@
-import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
+import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault.ts";
 
 const GITHUB_API = "https://api.github.com";
 
 type OAuthEnv = {
-	GITHUB_CLIENT_ID: string;
-	GITHUB_CLIENT_SECRET: string;
+	GITHUB_OAUTH_CLIENT_ID: string;
+	GITHUB_OAUTH_CLIENT_SECRET: string;
 	GITHUB_APP_ID: string;
 	GITHUB_APP_SLUG: string;
 };
@@ -19,13 +19,17 @@ function githubHeaders(token: string): HeadersInit {
 	};
 }
 
+function encodeBase64Utf8(value: string): string {
+	return btoa(unescape(encodeURIComponent(value)));
+}
+
 export async function exchangeCodeForUserToken(code: string, env: OAuthEnv): Promise<string> {
 	const res = await fetch("https://github.com/login/oauth/access_token", {
 		method: "POST",
 		headers: { Accept: "application/json", "Content-Type": "application/json" },
 		body: JSON.stringify({
-			client_id: env.GITHUB_CLIENT_ID,
-			client_secret: env.GITHUB_CLIENT_SECRET,
+			client_id: env.GITHUB_OAUTH_CLIENT_ID,
+			client_secret: env.GITHUB_OAUTH_CLIENT_SECRET,
 			code,
 		}),
 	});
@@ -72,7 +76,6 @@ export async function vaultExists(userToken: string, login: string): Promise<boo
 
 // Creates marcus-auto-second-brain repo and seeds it with folder structure.
 export async function provisionVault(userToken: string, login: string): Promise<void> {
-	// Step 1: create empty private repo with auto_init (creates main branch)
 	const createRes = await fetch(`${GITHUB_API}/user/repos`, {
 		method: "POST",
 		headers: githubHeaders(userToken),
@@ -80,7 +83,7 @@ export async function provisionVault(userToken: string, login: string): Promise<
 			name: VAULT_REPO_NAME,
 			private: true,
 			description: "Marcus — your personal second brain",
-			auto_init: true,
+			auto_init: false,
 		}),
 	});
 	if (!createRes.ok) {
@@ -88,30 +91,42 @@ export async function provisionVault(userToken: string, login: string): Promise<
 		throw new Error(`Failed to create vault repo: ${createRes.status} ${body}`);
 	}
 
-	// Step 2: poll until main branch ref is available (auto_init takes 1-3s)
-	let headSha: string | null = null;
-	for (let attempt = 0; attempt < 6; attempt++) {
-		await new Promise((r) => setTimeout(r, 1500));
-		const refRes = await fetch(
-			`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}/git/ref/heads/main`,
-			{ headers: githubHeaders(userToken) },
-		);
-		if (refRes.ok) {
-			headSha = ((await refRes.json()) as { object: { sha: string } }).object.sha;
-			break;
-		}
+	const readme = VAULT_SEED_FILES.find((file) => file.path === "README.md") ?? {
+		path: "README.md",
+		content: "# Marcus Second Brain\n\nManaged by Marcus.\n",
+	};
+	const bootstrapRes = await fetch(
+		`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}/contents/${readme.path}`,
+		{
+			method: "PUT",
+			headers: githubHeaders(userToken),
+			body: JSON.stringify({
+				message: "marcus: bootstrap vault",
+				content: encodeBase64Utf8(readme.content),
+			}),
+		},
+	);
+	if (!bootstrapRes.ok) {
+		const body = await bootstrapRes.text();
+		throw new Error(`Bootstrap failed: ${bootstrapRes.status} ${body}`);
 	}
-	if (!headSha) throw new Error("Vault repo not ready after creation — ref polling timed out");
+	const bootstrapData = (await bootstrapRes.json()) as { commit: { sha: string } };
+	const headSha = bootstrapData.commit.sha;
 
-	// Step 3: seed files in one atomic commit via GraphQL
-	const additions = VAULT_SEED_FILES.map((f) => ({
+	const additions = VAULT_SEED_FILES
+		.filter((file) => file.path !== readme.path)
+		.map((f) => ({
 		path: f.path,
-		contents: btoa(unescape(encodeURIComponent(f.content))),
+		contents: encodeBase64Utf8(f.content),
 	}));
 
 	const gqlRes = await fetch("https://api.github.com/graphql", {
 		method: "POST",
-		headers: { Authorization: `Bearer ${userToken}`, "Content-Type": "application/json" },
+		headers: {
+			Authorization: `Bearer ${userToken}`,
+			"Content-Type": "application/json",
+			"User-Agent": "marcus-mcp-server/0.2.0",
+		},
 		body: JSON.stringify({
 			query: `
         mutation($input: CreateCommitOnBranchInput!) {
@@ -131,6 +146,9 @@ export async function provisionVault(userToken: string, login: string): Promise<
 			},
 		}),
 	});
+	if (!gqlRes.ok) {
+		throw new Error(`GraphQL vault seed failed: ${gqlRes.status} ${await gqlRes.text()}`);
+	}
 
 	const gqlData = (await gqlRes.json()) as {
 		data?: { createCommitOnBranch: { commit: { oid: string } } };
