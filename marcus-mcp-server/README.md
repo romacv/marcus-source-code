@@ -84,6 +84,28 @@ When you open Claude a browser window should open and allow you to login. You sh
    - Callback URL: `https://marcus-mcp-server.r-df5.workers.dev/auth/github/callback`
 5. `npm run deploy`
 
+## Production assets (owner: @romacv)
+
+Live integrations registered against the deployed worker. Bookmark these —
+you'll need them to rotate secrets, edit display names, or revoke access.
+
+| Asset | Display name | Manage URL | Notes |
+|---|---|---|---|
+| GitHub App | `Marcus - Auto Second Brain` | <https://github.com/settings/apps/marcus-second-brain> | Slug: `marcus-second-brain`. Owns Contents R+W on the user's vault repo. JWT `iss` = its client_id (`Iv23li…`). Reads `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`. |
+| OAuth App | `Marcus — Second Brain` | <https://github.com/settings/applications/3583830> | App ID: `3583830`. Used by `/authorize` for the `gho_` user-access token with `repo` scope. Reads `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`. |
+| Worker | `marcus-mcp-server` | <https://dash.cloudflare.com> → Workers & Pages → marcus-mcp-server | URL: `https://marcus-mcp-server.r-df5.workers.dev`. Account ID: `df58e5e319c3e6d92c0173d9ea1c538b`. |
+| Vault repo (per user) | `marcus-second-brain-vault` | `https://github.com/{login}/marcus-second-brain-vault` | Auto-created by `provisionVault` on first connect. Private. Sentinel: `_marcus/version.txt`. |
+
+Both integrations share the same callback URL
+(`/auth/github/callback`); the worker routes by query params (`code` →
+Phase 1 OAuth, `installation_id` → Phase 2 App install).
+
+The two display names are intentionally similar but **distinct** — users
+see both names during the connect flow (OAuth consent screen shows
+*Marcus — Second Brain*; GitHub App install screen shows *Marcus - Auto
+Second Brain*). To unify them, rename the GitHub App at the URL above —
+the OAuth App slug/URL stays the same.
+
 ## Call your newly deployed remote MCP server from a remote MCP client
 
 Just like you did above in "Develop locally", run the MCP inspector:
@@ -115,6 +137,28 @@ Use this whenever you want to re-exercise OAuth + auto-provision + GitHub App
 install. The flow has three branches (fresh user, returning user, name collision)
 and resetting state proves all of them.
 
+> **⚠️ Pre-launch testing policy (zero-users phase)**
+>
+> Until Marcus is publicly launched and has real users, treat the vault, the
+> GitHub App installation, and the OAuth authorization as **disposable test
+> state**. To validate any change to the new-user flow:
+>
+> 1. **Wipe** the vault repo: `gh repo delete romacv/marcus-second-brain-vault --yes`
+> 2. **Uninstall** the GitHub App: <https://github.com/settings/installations>
+> 3. **Revoke** the OAuth App authorization: <https://github.com/settings/applications>
+>    (Authorized OAuth Apps tab; "Marcus — Second Brain" → Revoke)
+>
+> Then re-run the flow from scratch. **Do NOT** add data migrations, schema
+> versioning, backwards-compatibility shims, or "preserve existing data on
+> reseed" logic — there is nothing to preserve. The simplicity of "always
+> rebuild from a clean slate during testing" is the whole point of this
+> window. Every line of migration code written before the first real user
+> is wasted complexity that will outlive the constraint that justified it.
+>
+> Re-evaluate this policy at first public launch (TODO: link to launch
+> checklist when it exists). After that point, any schema or seed change
+> requires a real migration plan.
+
 ### 1. Reset to a clean new-user state
 
 All three steps are required — skipping any of them sends you down a different
@@ -144,7 +188,54 @@ npx wrangler tail --format=pretty
 
 Settings → Connectors → Marcus → Disconnect, then Connect.
 
-### 4. Expected tail signature (fresh user)
+### 4. Authorize the OAuth App (first browser screen)
+
+GitHub opens the **"Authorize Marcus — Second Brain"** page (title: *Authorize
+application*). Verify:
+
+- Account: `wants to access your romacv account`
+- **Repositories: Public and private** (proves the `repo` scope reached GitHub —
+  if you see anything narrower, the OAuth App's client_id or scope is wrong).
+- Redirect target at the bottom: `https://marcus-mcp-server.r-df5.workers.dev`.
+
+Click **Authorize romacv** (green button). This is the OAuth App consent — it
+returns a `gho_` user-access token to the worker. Org access requests
+(VerazNet, MyNovelTeam, etc.) are unrelated to Marcus and can be ignored.
+
+GitHub then briefly shows **"OAuth application authorized — You are being
+redirected to the authorized application"** (a white page with a flame icon).
+This is the standard GitHub interstitial that auto-redirects to
+`/auth/github/callback?code=…&state=…`. If it stalls there, click the *this
+setup page* link.
+
+### 5. Marcus "Almost there" install instructions
+
+After OAuth consent the worker redirects to `/vault/install`, which shows our
+own dark-themed page titled **"Marcus — Install on your vault"** with the
+heading **"Almost there"**. Verify:
+
+- Body says `Marcus has created your private vault. One last step…` (proves
+  Phase 1's `provisionVault` succeeded — vault repo now exists on GitHub).
+- Footer line: `Your vault: github.com/romacv/marcus-second-brain-vault`.
+
+Click **Continue to GitHub →** (yellow button).
+
+### 6. Authorize the GitHub App install (third browser screen)
+
+GitHub opens **"Install & Authorize Marcus - Auto Second Brain"** (the GitHub
+App — different name than the OAuth App from step 4: OAuth App is
+*Marcus - Second Brain*, GitHub App is *Marcus - Auto Second Brain*). Pick
+**Only select repositories** → choose `marcus-second-brain-vault` →
+**Install & Authorize**.
+
+GitHub then briefly shows **"Continue setting up the Marcus - Auto Second
+Brain integration — You are being redirected to Marcus - Auto Second Brain to
+continue installation"** (white page with an external-link icon). It
+auto-redirects back to
+`/auth/github/callback?installation_id=…&setup_action=install`. If it stalls,
+click *this setup page*.
+
+### 7. Expected tail signature (fresh user)
 
 ```
 [token-exchange] {"status":200,"token_prefix":"gho_…","scope":"repo"}
