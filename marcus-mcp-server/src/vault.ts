@@ -30,7 +30,7 @@ function titleCase(value: string): string {
 
 const README_CONTENT = `# Marcus — Your Second Brain
 
-Your personal vault, managed by [Marcus](https://marcus-mcp-server.r-df5.workers.dev).
+Your personal vault, managed by [Marcus](https://marcus-second-brain.com).
 Talk to it from Claude using the Marcus connector — every note here was
 written by you (or by Claude on your behalf).
 
@@ -81,7 +81,7 @@ export const VAULT_SEED_FILES: Array<{ path: string; content: string }> = [
 	{ path: "_marcus/version.txt", content: "1" },
 	{
 		path: "index.md",
-		content: "# Marcus Vault\n\nYour personal second brain. Managed by [Marcus](https://marcus-mcp-server.r-df5.workers.dev). See [README.md](./README.md) for navigation.\n",
+		content: "# Marcus Vault\n\nYour personal second brain. Managed by [Marcus](https://marcus-second-brain.com). See [README.md](./README.md) for navigation.\n",
 	},
 ];
 

@@ -657,7 +657,7 @@ export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => 
 		<h2>Connect in 4 steps</h2>
 		<ol class="connect-steps">
 			<li>Go to <a href="https://claude.ai/settings/connectors">claude.ai/settings/connectors</a> and click <strong>Add custom connector</strong>.</li>
-			<li>Paste <code>https://marcus-mcp-server.r-df5.workers.dev/mcp</code> in the URL field, name it <strong>Marcus Second Brain</strong>, and click Add.</li>
+			<li>Paste <code>https://marcus-second-brain.com/mcp</code> in the URL field, name it <strong>Marcus Second Brain</strong>, and click Add.</li>
 			<li>Sign in with GitHub. Marcus creates a private <code>marcus-second-brain-vault</code> repo in your account and requests access to that repo only.</li>
 			<li>Open a new Claude chat, click <strong>+</strong> → Connectors → enable Marcus. Ask Claude: <em>"Save this to my second brain."</em></li>
 		</ol>

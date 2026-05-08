@@ -1,6 +1,6 @@
 # marcus-mcp-server
 
-Cloudflare Worker that powers [Marcus — Your Automatic Second Brain](https://marcus-mcp-server.r-df5.workers.dev).
+Cloudflare Worker that powers [Marcus — Your Automatic Second Brain](https://marcus-second-brain.com).
 It exposes a remote MCP endpoint over Streamable HTTP at `/mcp`, brokers GitHub
 OAuth + GitHub App installation, and writes notes directly to a per-user
 private vault repo (`marcus-second-brain-vault`) using short-lived
@@ -74,7 +74,7 @@ Restart Claude Desktop. Sign in with GitHub when the browser window opens.
 4. Register two GitHub integrations that share the same callback URL:
    - GitHub App: used after installation for ongoing repo contents access.
    - Classic OAuth App: used for `/authorize`, exchanges a `gho_` token with `repo` scope, and auto-creates the private vault repo before handing off to the GitHub App.
-   - Callback URL: `https://marcus-mcp-server.r-df5.workers.dev/auth/github/callback`
+   - Callback URL: `https://marcus-second-brain.com/auth/github/callback`
 5. `npm run deploy`
 
 ## Production assets (owner: @romacv)
@@ -86,7 +86,7 @@ you'll need them to rotate secrets, edit display names, or revoke access.
 |---|---|---|---|
 | GitHub App | `Marcus - Auto Second Brain` | <https://github.com/settings/apps/marcus-second-brain> | Slug: `marcus-second-brain`. Owns Contents R+W on the user's vault repo. JWT `iss` = its client_id (`Iv23li…`). Reads `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`. |
 | OAuth App | `Marcus — Second Brain` | <https://github.com/settings/applications/3583830> | App ID: `3583830`. Used by `/authorize` for the `gho_` user-access token with `repo` scope. Reads `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`. |
-| Worker | `marcus-mcp-server` | <https://dash.cloudflare.com> → Workers & Pages → marcus-mcp-server | URL: `https://marcus-mcp-server.r-df5.workers.dev`. Account ID: `df58e5e319c3e6d92c0173d9ea1c538b`. |
+| Worker | `marcus-mcp-server` | <https://dash.cloudflare.com> → Workers & Pages → marcus-mcp-server | URL: `https://marcus-second-brain.com`. Account ID: `df58e5e319c3e6d92c0173d9ea1c538b`. |
 | Vault repo (per user) | `marcus-second-brain-vault` | `https://github.com/{login}/marcus-second-brain-vault` | Auto-created by `provisionVault` on first connect. Private. Sentinel: `_marcus/version.txt`. |
 
 Both integrations share the same callback URL
@@ -104,7 +104,7 @@ the OAuth App slug/URL stays the same.
 Point any MCP client at the deployed worker's `/mcp` endpoint:
 
 ```
-https://marcus-mcp-server.r-df5.workers.dev/mcp
+https://marcus-second-brain.com/mcp
 ```
 
 For Claude Desktop pointed at production:
@@ -114,7 +114,7 @@ For Claude Desktop pointed at production:
   "mcpServers": {
     "marcus": {
       "command": "npx",
-      "args": ["mcp-remote", "https://marcus-mcp-server.r-df5.workers.dev/mcp"]
+      "args": ["mcp-remote", "https://marcus-second-brain.com/mcp"]
     }
   }
 }
@@ -188,7 +188,7 @@ application*). Verify:
 - Account: `wants to access your romacv account`
 - **Repositories: Public and private** (proves the `repo` scope reached GitHub —
   if you see anything narrower, the OAuth App's client_id or scope is wrong).
-- Redirect target at the bottom: `https://marcus-mcp-server.r-df5.workers.dev`.
+- Redirect target at the bottom: `https://marcus-second-brain.com`.
 
 Click **Authorize romacv** (green button). This is the OAuth App consent — it
 returns a `gho_` user-access token to the worker. Org access requests
