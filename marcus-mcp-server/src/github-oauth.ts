@@ -1,3 +1,4 @@
+import { mintAppJwt } from "./github.ts";
 import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault.ts";
 
 const GITHUB_API = "https://api.github.com";
@@ -51,7 +52,40 @@ export async function getAuthenticatedUser(
 	return res.json() as Promise<{ login: string; id: number }>;
 }
 
-// Returns the Marcus App installation ID for this user, or null if not installed.
+// Canonical "is App installed for user X" lookup using a GitHub App JWT.
+// Does NOT depend on user OAuth scope or numeric GITHUB_APP_ID being correctly set.
+export async function findInstallationByLogin(
+	env: { GITHUB_APP_PRIVATE_KEY: string; GITHUB_APP_CLIENT_ID: string },
+	login: string,
+): Promise<string | null> {
+	const jwt = mintAppJwt(env);
+	const res = await fetch(`${GITHUB_API}/users/${login}/installation`, {
+		headers: {
+			Authorization: `Bearer ${jwt}`,
+			Accept: "application/vnd.github+json",
+			"X-GitHub-Api-Version": "2022-11-28",
+			"User-Agent": "marcus-mcp-server/0.2.0",
+		},
+	});
+	if (res.status === 404) {
+		console.log("[find-install-by-login]", JSON.stringify({ login, result: "none" }));
+		return null;
+	}
+	if (!res.ok) {
+		console.error("[find-install-by-login]", JSON.stringify({
+			login, status: res.status, body: (await res.text()).slice(0, 200),
+		}));
+		return null;
+	}
+	const data = (await res.json()) as { id: number };
+	console.log("[find-install-by-login]", JSON.stringify({ login, result: "found", id: data.id }));
+	return String(data.id);
+}
+
+// Legacy lookup using user OAuth token. Kept as a logged fallback so we can
+// detect cases where the JWT path misses but this path hits (would indicate
+// the App JWT call was misconfigured). Logs status/body on error and the
+// match outcome on success.
 export async function findInstallationForApp(
 	userToken: string,
 	appId: string,
@@ -59,29 +93,57 @@ export async function findInstallationForApp(
 	const res = await fetch(`${GITHUB_API}/user/installations`, {
 		headers: githubHeaders(userToken),
 	});
-	if (!res.ok) return null;
+	if (!res.ok) {
+		console.error("[find-install-for-app]", JSON.stringify({
+			status: res.status, body: (await res.text()).slice(0, 200),
+		}));
+		return null;
+	}
 	const data = (await res.json()) as {
 		installations: Array<{ id: number; app_id: number }>;
 	};
 	const found = data.installations.find((i) => i.app_id.toString() === appId);
+	console.log("[find-install-for-app]", JSON.stringify({
+		expectedAppId: appId,
+		listedCount: data.installations.length,
+		listedAppIds: data.installations.map((i) => i.app_id),
+		matched: !!found,
+	}));
 	return found ? String(found.id) : null;
 }
 
-export async function marcusVaultExists(userToken: string, login: string): Promise<boolean> {
+// Returns the state of the user's vault repo:
+//   "none"     — repo does not exist (safe to provision)
+//   "vault"    — repo exists and contains the Marcus sentinel file
+//   "conflict" — repo exists but is not a Marcus vault, OR repo state is
+//                unknown (any non-200/404 response). Fail closed: never
+//                provision over a repo we can't classify.
+export async function vaultRepoState(
+	userToken: string,
+	login: string,
+): Promise<"none" | "vault" | "conflict"> {
 	const repoRes = await fetch(`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}`, {
 		headers: githubHeaders(userToken),
 	});
-	if (!repoRes.ok) {
-		console.log("[marcus-vault-exists]", JSON.stringify({ login, repoExists: false, sentinelExists: false, result: false }));
-		return false;
+	if (repoRes.status === 404) {
+		console.log("[vault-repo-state]", JSON.stringify({ login, result: "none" }));
+		return "none";
 	}
-
+	if (!repoRes.ok) {
+		console.error("[vault-repo-state]", JSON.stringify({
+			login, status: repoRes.status, body: (await repoRes.text()).slice(0, 200),
+		}));
+		return "conflict";
+	}
 	const sentinelRes = await fetch(
 		`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}/contents/_marcus/version.txt`,
 		{ headers: githubHeaders(userToken) },
 	);
-	console.log("[marcus-vault-exists]", JSON.stringify({ login, repoExists: true, sentinelExists: sentinelRes.ok, result: sentinelRes.ok }));
-	return sentinelRes.ok;
+	const result = sentinelRes.ok ? "vault" : "conflict";
+	console.log("[vault-repo-state]", JSON.stringify({
+		login, repoExists: true, sentinelExists: sentinelRes.ok, result,
+	}));
+	return result;
 }
 
 // Creates marcus-auto-second-brain repo and seeds it with folder structure.

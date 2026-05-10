@@ -7,10 +7,11 @@ import { encryptForKv, hmacSign, hmacVerify } from "./crypto";
 import { GitHubClient } from "./github";
 import {
 	exchangeCodeForUserToken,
+	findInstallationByLogin,
 	findInstallationForApp,
 	getAuthenticatedUser,
-	marcusVaultExists,
 	provisionVault,
+	vaultRepoState,
 } from "./github-oauth";
 import { homeContent, layout } from "./utils";
 import { findUnrelatedVaultEntries } from "./vault-guard.ts";
@@ -82,7 +83,17 @@ app.get("/auth/github/callback", async (c) => {
 		await c.env.MARCUS_KV.delete(`state:${nonce}`);
 
 		// Seed vault via installation token (has Contents R+W on the repo)
-		await seedVaultIfNeeded(c.env, installationId, login);
+		try {
+			await seedVaultIfNeeded(c.env, installationId, login);
+		} catch (error) {
+			console.error("[seed-vault-failed]", JSON.stringify({
+				login, phase: "phase2-install", error: String(error).slice(0, 300),
+			}));
+			if (error instanceof StructuredToolError && error.code === "conflict") {
+				return c.redirect(`/vault/conflict?login=${encodeURIComponent(login)}`);
+			}
+			return c.redirect("/vault/error");
+		}
 
 		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, installationId);
 		await c.env.MARCUS_KV.put(`user:${userId}`, encrypted);
@@ -104,10 +115,33 @@ app.get("/auth/github/callback", async (c) => {
 	const user = await getAuthenticatedUser(userToken);
 	const userId = String(user.id);
 
-	// If App already installed, seed vault if needed and complete OAuth directly
-	const existingInstallId = await findInstallationForApp(userToken, c.env.GITHUB_APP_ID);
+	// If App already installed, seed vault if needed and complete OAuth directly.
+	// Primary lookup uses an App JWT (canonical, doesn't depend on user OAuth
+	// scope or numeric GITHUB_APP_ID secret correctness). Falls back to the
+	// legacy user-token lookup only if the JWT path returns null — and logs
+	// any disagreement so misconfiguration is detectable.
+	let existingInstallId = await findInstallationByLogin(c.env, user.login);
+	if (!existingInstallId) {
+		const fallback = await findInstallationForApp(userToken, c.env.GITHUB_APP_ID);
+		if (fallback) {
+			console.warn("[install-lookup-mismatch]", JSON.stringify({
+				login: user.login, jwt_path: "miss", user_token_path: "hit",
+			}));
+			existingInstallId = fallback;
+		}
+	}
 	if (existingInstallId) {
-		await seedVaultIfNeeded(c.env, existingInstallId, user.login);
+		try {
+			await seedVaultIfNeeded(c.env, existingInstallId, user.login);
+		} catch (error) {
+			console.error("[seed-vault-failed]", JSON.stringify({
+				login: user.login, phase: "phase1-existing-install", error: String(error).slice(0, 300),
+			}));
+			if (error instanceof StructuredToolError && error.code === "conflict") {
+				return c.redirect(`/vault/conflict?login=${encodeURIComponent(user.login)}`);
+			}
+			return c.redirect("/vault/error");
+		}
 
 		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, existingInstallId);
 		await c.env.MARCUS_KV.put(`user:${userId}`, encrypted);
@@ -138,19 +172,20 @@ app.get("/auth/github/callback", async (c) => {
 	const phase2State = btoa(phase2Payload) + "." + phase2Sig;
 
 	const installPagePath = `/vault/install?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`;
-	if (await marcusVaultExists(userToken, user.login)) {
+
+	const repoState = await vaultRepoState(userToken, user.login);
+	if (repoState === "vault") {
 		return c.redirect(installPagePath);
 	}
-
+	if (repoState === "conflict") {
+		return c.redirect(`/vault/conflict?login=${encodeURIComponent(user.login)}`);
+	}
+	// repoState === "none" — repo truly absent, safe to provision
 	try {
 		await provisionVault(userToken, user.login);
 		return c.redirect(installPagePath);
 	} catch (error) {
-		const message = String(error);
-		if (message.includes("422")) {
-			return c.redirect(`/vault/conflict?login=${encodeURIComponent(user.login)}`);
-		}
-		console.warn("[provision-vault] redirecting to error page", String(error).slice(0, 300));
+		console.warn("[provision-vault]", String(error).slice(0, 300));
 		return c.redirect("/vault/error");
 	}
 });

@@ -53,10 +53,13 @@ type TreeCacheEntry = {
 // Signs a JWT for GitHub App authentication using node:crypto.
 // Uses clientId as iss per GitHub's recommendation (migrating away from numeric App ID).
 // node:crypto handles PKCS#1 RSA keys natively — no manual DER wrapping needed.
-function signAppJwt(clientId: string, privateKeyPem: string): string {
+export function mintAppJwt(env: {
+	GITHUB_APP_PRIVATE_KEY: string;
+	GITHUB_APP_CLIENT_ID: string;
+}): string {
 	const now = Math.floor(Date.now() / 1000);
 	const header = { alg: "RS256", typ: "JWT" };
-	const payload = { iat: now - 60, exp: now + 600, iss: clientId };
+	const payload = { iat: now - 60, exp: now + 600, iss: env.GITHUB_APP_CLIENT_ID };
 
 	const enc = (obj: object) =>
 		btoa(JSON.stringify(obj)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
@@ -64,7 +67,7 @@ function signAppJwt(clientId: string, privateKeyPem: string): string {
 	const signingInput = `${enc(header)}.${enc(payload)}`;
 	const sig = createSign("RSA-SHA256")
 		.update(signingInput)
-		.sign(createPrivateKey({ key: privateKeyPem, format: "pem" }), "base64")
+		.sign(createPrivateKey({ key: env.GITHUB_APP_PRIVATE_KEY, format: "pem" }), "base64")
 		.replace(/=/g, "")
 		.replace(/\+/g, "-")
 		.replace(/\//g, "_");
@@ -113,7 +116,10 @@ export class GitHubClient {
 			return cached;
 		}
 
-		const jwt = signAppJwt(this.clientId, this.privateKeyPem);
+		const jwt = mintAppJwt({
+			GITHUB_APP_CLIENT_ID: this.clientId,
+			GITHUB_APP_PRIVATE_KEY: this.privateKeyPem,
+		});
 		console.log("[app-jwt]", { iss_prefix: this.clientId.slice(0, 6), installationId: this.installationId, exp_in_s: 600 });
 		const res = await fetch(
 			`${GITHUB_API}/app/installations/${this.installationId}/access_tokens`,

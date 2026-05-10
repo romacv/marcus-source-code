@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { marcusVaultExists, provisionVault } from "../github-oauth.ts";
+import { provisionVault, vaultRepoState } from "../github-oauth.ts";
 import { findUnrelatedVaultEntries } from "../vault-guard.ts";
 import { buildFrontmatter, extractAutoTags, parseFrontmatter } from "../vault.ts";
 
@@ -86,20 +86,20 @@ test("provisionVault creates the repo, bootstraps main, and seeds the rest atomi
 	assert.ok(graphQlBody.variables.input.fileChanges.additions.length > 0);
 });
 
-test("marcusVaultExists returns false when repo is missing", async () => {
+test("vaultRepoState returns 'none' when repo is missing (404)", async () => {
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = (async () =>
 		new Response(JSON.stringify({ message: "Not Found" }), { status: 404 })) as typeof fetch;
 
 	try {
-		const exists = await marcusVaultExists("gho_test", "romacv");
-		assert.equal(exists, false);
+		const state = await vaultRepoState("gho_test", "romacv");
+		assert.equal(state, "none");
 	} finally {
 		globalThis.fetch = originalFetch;
 	}
 });
 
-test("marcusVaultExists returns false when sentinel file is missing", async () => {
+test("vaultRepoState returns 'conflict' when repo exists but sentinel is missing", async () => {
 	const originalFetch = globalThis.fetch;
 	let callIndex = 0;
 	globalThis.fetch = (async () => {
@@ -111,22 +111,35 @@ test("marcusVaultExists returns false when sentinel file is missing", async () =
 	}) as typeof fetch;
 
 	try {
-		const exists = await marcusVaultExists("gho_test", "romacv");
-		assert.equal(exists, false);
+		const state = await vaultRepoState("gho_test", "romacv");
+		assert.equal(state, "conflict");
 		assert.equal(callIndex, 2);
 	} finally {
 		globalThis.fetch = originalFetch;
 	}
 });
 
-test("marcusVaultExists returns true when sentinel file exists", async () => {
+test("vaultRepoState returns 'vault' when sentinel file exists", async () => {
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = (async () =>
 		new Response(JSON.stringify({ id: 1 }), { status: 200 })) as typeof fetch;
 
 	try {
-		const exists = await marcusVaultExists("gho_test", "romacv");
-		assert.equal(exists, true);
+		const state = await vaultRepoState("gho_test", "romacv");
+		assert.equal(state, "vault");
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
+});
+
+test("vaultRepoState fails closed to 'conflict' on unexpected repo lookup error", async () => {
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = (async () =>
+		new Response(JSON.stringify({ message: "Server error" }), { status: 500 })) as typeof fetch;
+
+	try {
+		const state = await vaultRepoState("gho_test", "romacv");
+		assert.equal(state, "conflict");
 	} finally {
 		globalThis.fetch = originalFetch;
 	}
