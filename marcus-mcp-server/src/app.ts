@@ -1,6 +1,7 @@
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
 import { html, raw } from "hono/html";
+import { anonId } from "./audit";
 import { StructuredToolError } from "./errors.ts";
 import type { MarcusEnv } from "./index";
 import { encryptForKv, hmacSign, hmacVerify } from "./crypto";
@@ -89,8 +90,9 @@ app.get("/auth/github/callback", async (c) => {
 		try {
 			await seedVaultIfNeeded(c.env, installationId, login);
 		} catch (error) {
+			const uid = await anonId(login, c.env.KV_ENCRYPTION_KEY);
 			console.error("[seed-vault-failed]", JSON.stringify({
-				login, phase: "phase2-install", error: String(error).slice(0, 300),
+				uid, phase: "phase2-install", error: String(error).slice(0, 300),
 			}));
 			if (error instanceof StructuredToolError && error.code === "conflict") {
 				return c.redirect(`/vault/conflict?login=${encodeURIComponent(login)}`);
@@ -127,8 +129,9 @@ app.get("/auth/github/callback", async (c) => {
 	if (!existingInstallId) {
 		const fallback = await findInstallationForApp(userToken, c.env.GITHUB_APP_ID);
 		if (fallback) {
+			const uid = await anonId(user.login, c.env.KV_ENCRYPTION_KEY);
 			console.warn("[install-lookup-mismatch]", JSON.stringify({
-				login: user.login, jwt_path: "miss", user_token_path: "hit",
+				uid, jwt_path: "miss", user_token_path: "hit",
 			}));
 			existingInstallId = fallback;
 		}
@@ -137,8 +140,9 @@ app.get("/auth/github/callback", async (c) => {
 		try {
 			await seedVaultIfNeeded(c.env, existingInstallId, user.login);
 		} catch (error) {
+			const uid = await anonId(user.login, c.env.KV_ENCRYPTION_KEY);
 			console.error("[seed-vault-failed]", JSON.stringify({
-				login: user.login, phase: "phase1-existing-install", error: String(error).slice(0, 300),
+				uid, phase: "phase1-existing-install", error: String(error).slice(0, 300),
 			}));
 			if (error instanceof StructuredToolError && error.code === "conflict") {
 				return c.redirect(`/vault/conflict?login=${encodeURIComponent(user.login)}`);
@@ -274,6 +278,7 @@ app.get("/version", (c) => c.json({ version: "0.2.0", sha: "local-dev" }));
 // Seeds vault folder structure via installation token (Contents R+W).
 // Called after GitHub App is installed on the repo.
 async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: string): Promise<void> {
+	const uid = await anonId(login, env.KV_ENCRYPTION_KEY);
 	const gh = new GitHubClient(
 		env.GITHUB_APP_PRIVATE_KEY,
 		env.GITHUB_APP_ID,
@@ -288,7 +293,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 	// Skip if already seeded
 	try {
 		await gh.getFile("_marcus/version.txt");
-		console.log("[seed-vault]", JSON.stringify({ login, result: "skipped", reason: "sentinel" }));
+		console.log("[seed-vault]", JSON.stringify({ uid, result: "skipped", reason: "sentinel" }));
 		return;
 	} catch {
 		// not seeded yet
@@ -298,7 +303,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		const tree = await gh.listTree("");
 		const unrelated = findUnrelatedVaultEntries(tree);
 		if (unrelated.length > 0) {
-			console.log("[seed-vault]", JSON.stringify({ login, result: "refused", reason: "unrelated_content", unrelated: unrelated.slice(0, 3) }));
+			console.log("[seed-vault]", JSON.stringify({ uid, result: "refused", reason: "unrelated_content" }));
 			throw new StructuredToolError(
 				"conflict",
 				`Refusing to seed vault: repo contains unrelated content (${unrelated.slice(0, 3).join(", ")}). Rename/delete it or use an empty repository.`,
@@ -338,7 +343,7 @@ async function seedVaultIfNeeded(env: MarcusEnv, installationId: string, login: 
 		].join("\n"),
 		seedAdditions,
 	);
-	console.log("[seed-vault]", JSON.stringify({ login, result: "seeded" }));
+	console.log("[seed-vault]", JSON.stringify({ uid, result: "seeded" }));
 }
 
 export default app;

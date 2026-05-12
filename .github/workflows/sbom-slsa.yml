@@ -1,0 +1,31 @@
+name: SBOM + SLSA Provenance
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+jobs:
+  sbom-attest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: marcus-mcp-server/package-lock.json
+      - run: npm ci
+        working-directory: marcus-mcp-server
+      - name: Generate SBOM
+        run: npx --yes @cyclonedx/cyclonedx-npm --output-format JSON --output-file ../sbom.json
+        working-directory: marcus-mcp-server
+      - name: Attest SBOM (SLSA L2)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: sbom.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json

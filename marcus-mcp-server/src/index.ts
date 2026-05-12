@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpAgent } from "agents/mcp";
 import { z } from "zod";
 import app from "./app";
+import { anonId } from "./audit";
 import { formatToolError, isStructuredToolError, StructuredToolError } from "./errors";
 import { checkAndIncrement, resolveTier } from "./rate-limit";
 import { GitHubClient } from "./github";
@@ -183,9 +184,10 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 		} catch (err) {
 			const requestId = extra?.requestId === undefined ? undefined : String(extra.requestId);
 			const code = isStructuredToolError(err) ? err.code : "internal";
+			const uid = this.props ? await anonId(this.props.userId, this.env.KV_ENCRYPTION_KEY) : "anon";
 			console.error("[tool]", {
 				request_id: requestId,
-				user_id: this.props?.userId,
+				uid,
 				tool_name: name,
 				code,
 			});
@@ -580,7 +582,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						tool: "append_to_daily_note",
 						extras: heading ? { Heading: heading } : undefined,
 					});
-					console.log("[append-daily]", { path, outcome: existing ? "update" : "create", attempt });
+					console.log("[append-daily]", { outcome: existing ? "update" : "create", attempt });
 					try {
 						sha = await this.github.createCommitOnBranch("main", msg, [{ path, content: body }]);
 						break;
