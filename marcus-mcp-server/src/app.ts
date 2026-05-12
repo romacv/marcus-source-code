@@ -1,7 +1,7 @@
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
 import { html, raw } from "hono/html";
-import { anonId } from "./audit";
+import { anonId } from "./audit.ts";
 import { StructuredToolError } from "./errors.ts";
 import type { MarcusEnv } from "./index";
 import { encryptForKv, hmacSign, hmacVerify } from "./crypto";
@@ -125,7 +125,7 @@ app.get("/auth/github/callback", async (c) => {
 	// scope or numeric GITHUB_APP_ID secret correctness). Falls back to the
 	// legacy user-token lookup only if the JWT path returns null — and logs
 	// any disagreement so misconfiguration is detectable.
-	let existingInstallId = await findInstallationByLogin(c.env, user.login);
+	let existingInstallId = await findInstallationByLogin(c.env, user.login, c.env.KV_ENCRYPTION_KEY);
 	if (!existingInstallId) {
 		const fallback = await findInstallationForApp(userToken, c.env.GITHUB_APP_ID);
 		if (fallback) {
@@ -180,7 +180,7 @@ app.get("/auth/github/callback", async (c) => {
 
 	const installPagePath = `/vault/install?state=${encodeURIComponent(phase2State)}&login=${encodeURIComponent(user.login)}`;
 
-	const repoState = await vaultRepoState(userToken, user.login);
+	const repoState = await vaultRepoState(userToken, user.login, c.env.KV_ENCRYPTION_KEY);
 	if (repoState === "vault") {
 		return c.redirect(installPagePath);
 	}
@@ -189,7 +189,7 @@ app.get("/auth/github/callback", async (c) => {
 	}
 	// repoState === "none" — repo truly absent, safe to provision
 	try {
-		await provisionVault(userToken, user.login);
+		await provisionVault(userToken, user.login, c.env.KV_ENCRYPTION_KEY);
 		return c.redirect(installPagePath);
 	} catch (error) {
 		console.warn("[provision-vault]", String(error).slice(0, 300));

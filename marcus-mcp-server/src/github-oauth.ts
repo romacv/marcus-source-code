@@ -1,5 +1,6 @@
 import { mintAppJwt } from "./github.ts";
 import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault.ts";
+import { anonId } from "./audit.ts";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -57,7 +58,9 @@ export async function getAuthenticatedUser(
 export async function findInstallationByLogin(
 	env: { GITHUB_APP_PRIVATE_KEY: string; GITHUB_APP_CLIENT_ID: string },
 	login: string,
+	secretKey: string,
 ): Promise<string | null> {
+	const uid = await anonId(login, secretKey);
 	const jwt = mintAppJwt(env);
 	const res = await fetch(`${GITHUB_API}/users/${login}/installation`, {
 		headers: {
@@ -68,17 +71,17 @@ export async function findInstallationByLogin(
 		},
 	});
 	if (res.status === 404) {
-		console.log("[find-install-by-login]", JSON.stringify({ login, result: "none" }));
+		console.log("[find-install-by-login]", JSON.stringify({ uid, result: "none" }));
 		return null;
 	}
 	if (!res.ok) {
 		console.error("[find-install-by-login]", JSON.stringify({
-			login, status: res.status, body: (await res.text()).slice(0, 200),
+			uid, status: res.status, body: (await res.text()).slice(0, 200),
 		}));
 		return null;
 	}
 	const data = (await res.json()) as { id: number };
-	console.log("[find-install-by-login]", JSON.stringify({ login, result: "found", id: data.id }));
+	console.log("[find-install-by-login]", JSON.stringify({ uid, result: "found", id: data.id }));
 	return String(data.id);
 }
 
@@ -121,17 +124,19 @@ export async function findInstallationForApp(
 export async function vaultRepoState(
 	userToken: string,
 	login: string,
+	secretKey: string,
 ): Promise<"none" | "vault" | "conflict"> {
+	const uid = await anonId(login, secretKey);
 	const repoRes = await fetch(`${GITHUB_API}/repos/${login}/${VAULT_REPO_NAME}`, {
 		headers: githubHeaders(userToken),
 	});
 	if (repoRes.status === 404) {
-		console.log("[vault-repo-state]", JSON.stringify({ login, result: "none" }));
+		console.log("[vault-repo-state]", JSON.stringify({ uid, result: "none" }));
 		return "none";
 	}
 	if (!repoRes.ok) {
 		console.error("[vault-repo-state]", JSON.stringify({
-			login, status: repoRes.status, body: (await repoRes.text()).slice(0, 200),
+			uid, status: repoRes.status, body: (await repoRes.text()).slice(0, 200),
 		}));
 		return "conflict";
 	}
@@ -141,13 +146,14 @@ export async function vaultRepoState(
 	);
 	const result = sentinelRes.ok ? "vault" : "conflict";
 	console.log("[vault-repo-state]", JSON.stringify({
-		login, repoExists: true, sentinelExists: sentinelRes.ok, result,
+		uid, repoExists: true, sentinelExists: sentinelRes.ok, result,
 	}));
 	return result;
 }
 
 // Creates marcus-auto-second-brain repo and seeds it with folder structure.
-export async function provisionVault(userToken: string, login: string): Promise<void> {
+export async function provisionVault(userToken: string, login: string, secretKey: string): Promise<void> {
+	const uid = await anonId(login, secretKey);
 	const createRes = await fetch(`${GITHUB_API}/user/repos`, {
 		method: "POST",
 		headers: githubHeaders(userToken),
@@ -229,5 +235,5 @@ export async function provisionVault(userToken: string, login: string): Promise<
 	if (gqlData.errors) {
 		throw new Error(`GraphQL vault seed failed: ${JSON.stringify(gqlData.errors)}`);
 	}
-	console.log("[provision-vault]", JSON.stringify({ login, ok: true, repoCreated: true, seeded: true }));
+	console.log("[provision-vault]", JSON.stringify({ uid, ok: true, repoCreated: true, seeded: true }));
 }
