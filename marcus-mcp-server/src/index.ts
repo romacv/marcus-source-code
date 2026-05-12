@@ -4,6 +4,7 @@ import { McpAgent } from "agents/mcp";
 import { z } from "zod";
 import app from "./app";
 import { formatToolError, isStructuredToolError, StructuredToolError } from "./errors";
+import { checkAndIncrement, resolveTier } from "./rate-limit";
 import { GitHubClient } from "./github";
 import {
 	formatMemoryLine,
@@ -29,6 +30,7 @@ import {
 
 export type MarcusEnv = Cloudflare.Env & {
 	MARCUS_KV: KVNamespace;
+	RATE_LIMIT_KV: KVNamespace;
 	GITHUB_APP_CLIENT_ID: string;
 	GITHUB_APP_ID: string;
 	GITHUB_APP_SLUG: string;
@@ -170,6 +172,13 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 
 	private async run<T>(name: string, extra: ToolExtra | undefined, fn: () => Promise<T>): Promise<T | ReturnType<typeof formatToolError>> {
 		try {
+			if (this.props) {
+				await checkAndIncrement({
+					kv: this.env.RATE_LIMIT_KV,
+					userId: this.props.userId,
+					tier: resolveTier(this.props.userId),
+				});
+			}
 			return await fn();
 		} catch (err) {
 			const requestId = extra?.requestId === undefined ? undefined : String(extra.requestId);

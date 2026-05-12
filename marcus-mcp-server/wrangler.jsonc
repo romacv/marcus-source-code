@@ -37,6 +37,11 @@
 			// Created via: wrangler kv namespace create MARCUS_KV
 			"binding": "MARCUS_KV",
 			"id": "e23144513e334331956d255c6bc766a4"
+		},
+		{
+			// Created via: npx wrangler kv namespace create RATE_LIMIT_KV
+			"binding": "RATE_LIMIT_KV",
+			"id": "4032b2b6a1db42578641a406599945da"
 		}
 	],
 	// Secrets set via: wrangler secret put GITHUB_APP_CLIENT_ID, etc.
