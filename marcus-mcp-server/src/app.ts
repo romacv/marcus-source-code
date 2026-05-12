@@ -243,11 +243,13 @@ app.get("/vault/error", (c) => {
 	const reconnectUrl = "/authorize";
 	const content = raw(
 		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
-			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">Vault setup failed</h1>
-			<p style="color:var(--muted);margin-bottom:1.5rem">Marcus could not create your private vault repository.</p>
-			<p style="color:var(--muted);margin-bottom:2rem">Please try again. If it keeps failing, check that your GitHub account has permission to create repositories.</p>
-			<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem">
-				<a href="${reconnectUrl}" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none">Try again</a>
+			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:400;letter-spacing:-.025em;text-transform:uppercase;margin-bottom:1rem">Vault setup failed</h1>
+			<div class="alert">
+				<div class="alert__title">Could not create repository</div>
+				<p class="alert__body">Marcus could not create your private vault repository. Please try again. If it keeps failing, check that your GitHub account has permission to create repositories.</p>
+			</div>
+			<div class="cta" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem">
+				<a href="${reconnectUrl}" class="cta--primary" style="background:var(--ink-rubric);box-shadow:4px 4px 0 var(--ink);">Try again →</a>
 			</div>
 		</div>`,
 	);
@@ -260,14 +262,16 @@ app.get("/vault/conflict", (c) => {
 	const reconnectUrl = "/authorize";
 	const content = raw(
 		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
-			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:700;margin-bottom:.75rem">Vault name conflict</h1>
-			<p style="color:var(--muted);margin-bottom:1.5rem">Marcus found a repository named <strong style="color:var(--text)">${VAULT_REPO_NAME}</strong>, but it does not look like a Marcus vault.</p>
-			<p style="color:var(--muted);margin-bottom:2rem">To avoid writing Marcus files into unrelated content, rename or delete that repository first, then reconnect.</p>
-			<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem">
-				<a href="${settingsUrl}" target="_blank" style="display:inline-block;padding:.75rem 1.5rem;background:var(--accent);color:#000;font-weight:600;border-radius:6px;text-decoration:none">Open repository settings ↗</a>
-				<a href="${reconnectUrl}" style="display:inline-block;padding:.75rem 1.5rem;border:1px solid var(--hair);color:var(--text);border-radius:6px;text-decoration:none">Try again</a>
+			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:400;letter-spacing:-.025em;text-transform:uppercase;margin-bottom:1rem">Vault name conflict</h1>
+			<div class="alert">
+				<div class="alert__title">Repository name taken</div>
+				<p class="alert__body">Marcus found a repository named <strong>${VAULT_REPO_NAME}</strong>, but it does not look like a Marcus vault. To avoid writing Marcus files into unrelated content, rename or delete that repository first, then reconnect.</p>
 			</div>
-			<p style="color:var(--subtle);font-size:.8rem">Conflicting repo: <code style="color:var(--muted)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
+			<div class="cta" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem;margin-bottom:1.5rem">
+				<a href="${settingsUrl}" target="_blank" class="cta--primary">Open repository settings ↗</a>
+				<a href="${reconnectUrl}" class="cta--secondary">Try again</a>
+			</div>
+			<p style="color:var(--subtle);font-size:var(--tx-xs);font-family:var(--f-mono)">Conflicting repo: <code style="color:var(--ink-blue)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
 		</div>`,
 	);
 	return c.html(layout(content, "Marcus — Vault conflict"));

@@ -3,7 +3,7 @@ import type { HtmlEscapedString } from "hono/utils/html";
 
 // Single source of truth for the Marcus brand mark in the site header.
 // Edit here to update every page's header simultaneously.
-export const siteLogoMarkup = html`<img src="/img/brain-mark.png" width="28" height="28" alt="" aria-hidden="true" class="site-logo__mark"><span class="site-logo__word">Marcus</span>`;
+export const siteLogoMarkup = html`<span class="brand__word">MARCUS</span>`;
 
 export const layout = (content: HtmlEscapedString | string, title: string) => html`
 	<!DOCTYPE html>
@@ -15,34 +15,52 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 			<link rel="preconnect" href="https://fonts.googleapis.com" />
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 			<link
-				href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap"
+				href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,0..100,0..1&family=JetBrains+Mono:wght@400;500;600&display=swap"
 				rel="stylesheet"
 			/>
 			<style>
 				/* ── Design tokens ──────────────────────────────────────── */
 				:root {
-					--bg:       #0e0c0b;
-					--surface:  #181512;
-					--text:     #ede8df;
-					--muted:    rgba(237,232,223,.55);
-					--subtle:   rgba(237,232,223,.25);
-					--accent:   #d4922a;
-					--accent-d: rgba(212,146,42,.1);
-					--sage:     #6b9e72;
-					--hair:     rgba(237,232,223,.07);
-					--glass:    rgba(14,12,11,.82);
+					/* paper */
+					--paper:      #E8EAD8;
+					--paper-deep: #DCDFC9;
+					--paper-edge: #C9CCB6;
 
-					--f-display: 'Syne',system-ui,sans-serif;
-					--f-body:    'Lora',Georgia,serif;
-					--f-mono:    'JetBrains Mono','Fira Code',monospace;
+					/* inks */
+					--ink:        #1B2A24;
+					--ink-soft:   rgba(27,42,36,.62);
+					--ink-faint:  rgba(27,42,36,.36);
+					--ink-hair:   rgba(27,42,36,.16);
+
+					/* draftsman 4-ink palette */
+					--ink-rubric: #B83229;
+					--ink-blue:   #1F4E79;
+					--ink-hilite: #D9A823;
+					--ink-field:  #2F6B3A;
+
+					/* backward-compat aliases */
+					--bg:         var(--paper);
+					--surface:    var(--paper-deep);
+					--text:       var(--ink);
+					--muted:      var(--ink);
+					--subtle:     var(--ink-faint);
+					--hair:       var(--ink-hair);
+					--accent:     var(--ink-field);
+					--accent-d:   rgba(47,107,58,.12);
+					--sage:       var(--ink-field);
+					--glass:      var(--paper);
+
+					--f-display: 'Archivo Black',system-ui,sans-serif;
+					--f-body:    'Fraunces',Georgia,serif;
+					--f-mono:    'JetBrains Mono','Fira Code',ui-monospace,monospace;
 
 					--tx-xs:   clamp(.6875rem,.3vw + .6rem,.75rem);
 					--tx-sm:   clamp(.8125rem,.3vw + .72rem,.875rem);
-					--tx-base: clamp(.9375rem,.3vw + .85rem,1.0625rem);
+					--tx-base: clamp(1rem,.3vw + .9rem,1.0625rem);
 					--tx-lg:   clamp(1.125rem,.5vw + 1rem,1.3125rem);
-					--tx-xl:   clamp(1.375rem,1.5vw + 1rem,1.875rem);
+					--tx-xl:   clamp(1.5rem,1.5vw + 1rem,1.875rem);
 					--tx-2xl:  clamp(1.875rem,3vw + 1rem,2.75rem);
-					--tx-3xl:  clamp(2.5rem,5vw + 1rem,4.5rem);
+					--tx-3xl:  clamp(2.75rem,5vw + 1rem,5rem);
 
 					--ease: cubic-bezier(.16,1,.3,1);
 				}
@@ -51,7 +69,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				*, *::before, *::after { box-sizing: border-box; margin: 0; }
 
 				html {
-					color-scheme: dark;
+					color-scheme: light;
 					scroll-behavior: smooth;
 				}
 
@@ -64,29 +82,40 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 
 				/* ── Base ───────────────────────────────────────────────── */
 				body {
-					background: var(--bg);
-					color: var(--text);
+					background: var(--paper);
+					background-image:
+						linear-gradient(to right,  rgba(27,42,36,.055) 1px, transparent 1px),
+						linear-gradient(to bottom, rgba(27,42,36,.055) 1px, transparent 1px);
+					background-size: 24px 24px;
+					color: var(--ink);
 					font-family: var(--f-body);
 					font-size: var(--tx-base);
 					font-weight: 400;
-					line-height: 1.7;
+					line-height: 1.65;
 					-webkit-font-smoothing: antialiased;
 					min-height: 100dvh;
 					display: flex;
 					flex-direction: column;
+					position: relative;
 				}
 
-				/* Film grain overlay */
-				body::after {
+				/* Procedural radial grain — paper texture */
+				body::before {
 					content: '';
 					position: fixed;
 					inset: 0;
 					pointer-events: none;
-					background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-					background-size: 200px;
-					mix-blend-mode: overlay;
-					z-index: 9999;
+					background:
+						radial-gradient(circle at 20% 30%, rgba(27,42,36,.025) 0, transparent 1px),
+						radial-gradient(circle at 70% 60%, rgba(27,42,36,.02)  0, transparent 1px),
+						radial-gradient(circle at 40% 80%, rgba(27,42,36,.025) 0, transparent 1px);
+					background-size: 7px 7px, 11px 11px, 13px 13px;
+					mix-blend-mode: multiply;
+					opacity: .9;
+					z-index: 0;
 				}
+
+				.site-header, .site-main, .site-footer { position: relative; z-index: 1; }
 
 				/* ── Shell ──────────────────────────────────────────────── */
 				.shell {
@@ -101,10 +130,8 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					position: sticky;
 					top: 0;
 					z-index: 20;
-					border-bottom: 1px solid var(--hair);
-					background: var(--glass);
-					backdrop-filter: blur(16px) saturate(1.4);
-					-webkit-backdrop-filter: blur(16px) saturate(1.4);
+					border-bottom: 1px solid var(--ink);
+					background: var(--paper);
 				}
 
 				.site-header__inner {
@@ -115,41 +142,29 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					padding-block: 1.125rem;
 				}
 
-				.site-logo {
+				.brand {
 					display: inline-flex;
-					align-items: center;
-					gap: .5rem;
-					color: var(--text);
+					align-items: baseline;
+					gap: .55rem;
+					color: var(--ink);
 					text-decoration: none;
-					transition: color 150ms ease;
 				}
-
-				.site-logo__mark {
-					display: block;
-					height: 28px;
-					width: auto;
-				}
-
-				.site-logo__word {
+				.brand__word {
 					font-family: var(--f-display);
-					font-size: 1.4375rem;
-					font-weight: 600;
-					line-height: 1;
+					font-size: 1.3rem;
+					font-weight: 400;
 					letter-spacing: -.015em;
-				}
-
-				.site-logo:hover .site-logo__word { color: var(--accent); }
-
-				.site-header__pill {
-					font-family: var(--f-mono);
-					font-size: .625rem;
-					letter-spacing: .1em;
-					text-transform: uppercase;
-					color: var(--muted);
-					border: 1px solid rgba(237,232,223,.22);
-					border-radius: 2px;
-					padding: .2em .6em;
 					line-height: 1;
+				}
+				.brand__word::after {
+					content: '.';
+					color: var(--ink-rubric);
+				}
+				.header-meta {
+					font-family: var(--f-mono);
+					font-size: .72rem;
+					color: var(--ink-soft);
+					letter-spacing: .04em;
 				}
 
 				/* ── Main ───────────────────────────────────────────────── */
@@ -160,21 +175,21 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 
 				/* ── OSS Banner ─────────────────────────────────────────── */
 				.oss-banner {
-					background: #F7F7F8;
-					border-bottom: 1px solid #E5E5E7;
+					background: var(--paper-deep);
+					border-bottom: 1px solid var(--ink-hair);
 					padding: 8px 16px;
 					text-align: center;
 					font-size: 14px;
 					line-height: 1.4;
-					color: #1A1A1A;
+					color: var(--ink);
 				}
 				.oss-banner p { margin: 0; }
 				.oss-banner a {
-					color: #1A1A1A;
+					color: var(--ink);
 					text-decoration: underline;
 					font-weight: 600;
 				}
-				.oss-banner a:hover { color: #000; }
+				.oss-banner a:hover { color: var(--ink-rubric); }
 
 				@media (max-width: 480px) {
 					.oss-banner { font-size: 13px; padding: 8px 12px; }
@@ -182,38 +197,67 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 
 				/* ── Site Footer ─────────────────────────────────────────── */
 				.site-footer {
-					margin-top: 64px;
-					padding: 24px 16px;
-					border-top: 1px solid #E5E5E7;
-					background: #FAFAFA;
-					text-align: center;
-					font-size: 14px;
-					line-height: 1.5;
-					color: #6B6B6F;
+					margin-top: auto;
+					border-top: 1px solid var(--ink);
+					background: var(--paper);
+					padding-block: clamp(2rem,4vw,3rem) 2rem;
 				}
-				.site-footer-nav {
-					margin-bottom: 8px;
-				}
-				.site-footer-nav a {
-					color: #1A1A1A;
-					text-decoration: none;
-					margin: 0 4px;
-				}
-				.site-footer-nav a:hover { text-decoration: underline; }
-				.site-footer-meta {
+
+				/* TOC sitemap */
+				.toc { margin-bottom: 1.5rem; }
+				.toc__list {
+					list-style: none;
+					padding: 0;
 					margin: 0;
-					font-size: 13px;
+					display: grid;
+					gap: .4rem;
+					max-width: 560px;
 				}
-				.site-footer-meta a {
-					color: #6B6B6F;
+				.toc__row {
+					display: grid;
+					grid-template-columns: 1fr auto;
+					align-items: baseline;
+					gap: .5rem;
+					font-family: var(--f-mono);
+					font-size: .82rem;
+					color: var(--ink-soft);
+				}
+				.toc__row a {
+					color: var(--ink);
+					text-decoration: none;
+					background-image: radial-gradient(circle, var(--ink-faint) 1px, transparent 1.2px);
+					background-size: 6px 6px;
+					background-repeat: repeat-x;
+					background-position: 0 0.95em;
+					display: block;
+				}
+				.toc__row a:hover { color: var(--ink-rubric); }
+				.toc__row a span {
+					background: var(--paper);
+					padding-right: 6px;
+				}
+				.toc__row .pg {
+					font-family: var(--f-mono);
+					font-size: .76rem;
+					color: var(--ink-soft);
+					background: var(--paper);
+					padding-left: 6px;
+				}
+				.footer-meta {
+					font-family: var(--f-mono);
+					font-size: .72rem;
+					color: var(--ink-faint);
+					padding-top: 1rem;
+					border-top: 1px solid var(--ink-hair);
+					display: flex;
+					gap: 1rem;
+					flex-wrap: wrap;
+				}
+				.footer-meta a {
+					color: var(--ink-faint);
 					text-decoration: underline;
 				}
-				.site-footer-meta a:hover { color: #1A1A1A; }
-
-				@media (max-width: 480px) {
-					.site-footer { font-size: 13px; padding: 20px 12px; }
-					.site-footer-meta { font-size: 12px; }
-				}
+				.footer-meta a:hover { color: var(--ink); }
 
 				/* ── Legal pages ─────────────────────────────────────────── */
 				.legal-page {
@@ -232,11 +276,11 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					font-family: var(--f-mono);
 					font-size: var(--tx-xs);
 					letter-spacing: .07em;
-					color: var(--muted);
+					color: var(--ink-soft);
 					margin-bottom: 2.5rem;
 				}
 				.legal-page .legal-lead {
-					color: var(--muted);
+					color: var(--ink-soft);
 					font-style: italic;
 					margin-bottom: 2.5rem;
 					font-size: var(--tx-lg);
@@ -265,7 +309,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				}
 				.legal-page ul li { margin-bottom: .5rem; }
 				.legal-page a {
-					color: var(--accent);
+					color: var(--ink-rubric);
 					text-decoration: none;
 				}
 				.legal-page a:hover { text-decoration: underline; }
@@ -289,25 +333,44 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				.hero h1 {
 					font-family: var(--f-display);
 					font-size: var(--tx-3xl);
-					font-weight: 800;
-					letter-spacing: -.03em;
-					line-height: .98;
+					font-weight: 400;
+					letter-spacing: -.035em;
+					line-height: .92;
+					text-transform: uppercase;
+					color: var(--ink);
+					max-width: 14ch;
+					text-shadow: 1.5px 1.5px 0 rgba(31,78,121,.16);
 					margin-bottom: 1.25rem;
 					animation: reveal .7s var(--ease) both;
 				}
+				.hero h1 em {
+					font-style: normal;
+					color: var(--ink-rubric);
+					display: inline-block;
+					transform: rotate(-1.5deg);
+				}
 				.hero .lede {
 					font-family: var(--f-body);
+					font-variation-settings: "opsz" 80, "SOFT" 30, "WONK" 0;
 					font-size: var(--tx-lg);
-					font-style: italic;
-					color: var(--muted);
-					line-height: 1.65;
+					line-height: 1.55;
+					color: var(--ink-soft);
+					margin-top: 1.5rem;
 					margin-bottom: 2rem;
+					max-width: 48ch;
 					animation: reveal .7s var(--ease) 80ms both;
+				}
+				.hero .lede strong {
+					color: var(--ink);
+					font-weight: 600;
+					background: linear-gradient(180deg, transparent 60%, rgba(217,168,35,.45) 60%, rgba(217,168,35,.45) 88%, transparent 88%);
+					padding: 0 .12em;
 				}
 				.hero__art {
 					width: 100%;
-					border-radius: 8px;
-					border: 1px solid var(--hair);
+					border-radius: 2px;
+					border: 1px solid var(--ink);
+					box-shadow: 3px 3px 0 var(--ink-blue);
 					animation: reveal .9s var(--ease) 120ms both;
 				}
 				.cta {
@@ -316,63 +379,102 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					gap: .75rem;
 					animation: reveal .7s var(--ease) 160ms both;
 				}
-				.cta--primary {
-					background: var(--accent);
-					color: #0e0c0b;
-					padding: .85rem 1.4rem;
-					border-radius: 6px;
+				.cta--primary,
+				.cta--secondary {
 					font-family: var(--f-display);
-					font-weight: 600;
-					font-size: var(--tx-sm);
+					font-weight: 400;
+					font-size: .95rem;
 					letter-spacing: .01em;
 					text-decoration: none;
-					transition: opacity 150ms ease;
+					text-transform: uppercase;
+					padding: .9rem 1.4rem;
+					border-radius: 2px;
+					transition: transform 180ms var(--ease), box-shadow 180ms var(--ease);
+					display: inline-flex;
+					align-items: center;
+					gap: .55rem;
 				}
-				.cta--primary:hover { opacity: .88; }
+				.cta--primary {
+					background: var(--ink-field);
+					color: var(--paper);
+					box-shadow: 4px 4px 0 var(--ink-rubric);
+				}
+				.cta--primary:hover {
+					transform: translate(-2px,-2px) rotate(-.4deg);
+					box-shadow: 6px 6px 0 var(--ink-rubric);
+				}
+				.cta--primary:active {
+					transform: translate(2px,2px);
+					box-shadow: 1px 1px 0 var(--ink-rubric);
+				}
 				.cta--secondary {
-					color: var(--text);
-					padding: .85rem 1.1rem;
-					border: 1px solid var(--hair);
-					border-radius: 6px;
-					font-family: var(--f-display);
-					font-weight: 500;
-					font-size: var(--tx-sm);
-					text-decoration: none;
-					transition: border-color 150ms ease;
+					background: transparent;
+					color: var(--ink);
+					border: 2px solid var(--ink);
+					box-shadow: 4px 4px 0 var(--ink);
 				}
-				.cta--secondary:hover { border-color: rgba(237,232,223,.22); }
+				.cta--secondary:hover {
+					transform: translate(-2px,-2px);
+					box-shadow: 6px 6px 0 var(--ink);
+					background: var(--paper-deep);
+				}
 
 				.section {
 					padding-block: clamp(3rem,5vw,5rem);
 					border-top: 1px solid var(--hair);
 				}
 				.section__eyebrow {
+					display: inline-block;
 					font-family: var(--f-mono);
-					font-size: var(--tx-xs);
-					letter-spacing: .1em;
+					font-size: .72rem;
+					font-weight: 500;
+					letter-spacing: .12em;
 					text-transform: uppercase;
-					color: var(--accent);
-					margin-bottom: .875rem;
+					color: var(--ink);
+					background: var(--ink-hilite);
+					padding: .3rem .65rem .25rem;
+					clip-path: polygon(2% 12%, 98% 4%, 100% 88%, 4% 96%);
+					transform: rotate(-.8deg);
+					margin-bottom: 1rem;
 				}
 				.section h2 {
 					font-family: var(--f-display);
 					font-size: var(--tx-2xl);
-					font-weight: 700;
-					letter-spacing: -.02em;
-					line-height: 1.1;
-					margin-bottom: 1.5rem;
+					font-weight: 400;
+					letter-spacing: -.025em;
+					line-height: 1;
+					text-transform: uppercase;
+					color: var(--ink);
+					margin-bottom: 1rem;
 				}
 				.section p {
-					color: var(--muted);
-					line-height: 1.78;
-					max-width: 640px;
-					margin-bottom: 1.125rem;
+					font-family: var(--f-body);
+					font-variation-settings: "opsz" 14, "SOFT" 30;
+					color: var(--ink);
+					line-height: 1.7;
+					max-width: 64ch;
+					margin-bottom: 1rem;
+				}
+				.section p strong {
+					color: var(--ink);
+					font-weight: 600;
+					background: linear-gradient(180deg, transparent 60%, rgba(217,168,35,.45) 60%, rgba(217,168,35,.45) 88%, transparent 88%);
+					padding: 0 .12em;
+				}
+				.section p code {
+					font-family: var(--f-mono);
+					font-size: .85em;
+					background: var(--paper-deep);
+					padding: 1px 6px;
+					border-radius: 2px;
+					color: var(--ink-blue);
 				}
 				.section__img {
 					width: 100%;
 					max-width: 840px;
-					border-radius: 8px;
-					border: 1px solid var(--hair);
+					border-radius: 2px;
+					border: 1px solid var(--ink);
+					box-shadow: 3px 3px 0 var(--ink-blue);
 					margin-block: 2rem;
 					display: block;
 				}
@@ -387,10 +489,11 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					.steps-row { grid-template-columns: repeat(3, 1fr); }
 				}
 				.step {
-					background: var(--surface);
-					border: 1px solid var(--hair);
-					border-radius: 6px;
+					background: var(--paper-deep);
+					border: 1px solid var(--ink);
+					border-radius: 2px;
 					padding: 1.5rem;
+					box-shadow: 3px 3px 0 var(--ink-blue);
 				}
 				.step__num {
 					font-family: var(--f-mono);
@@ -469,7 +572,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					font-weight: 500;
 					color: var(--subtle);
 					padding: .625rem .875rem;
-					border-bottom: 1px solid rgba(237,232,223,.12);
+					border-bottom: 1px solid var(--ink-hair);
 					text-align: left;
 				}
 				.tools-table td {
@@ -485,17 +588,69 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					white-space: nowrap;
 				}
 
+				/* ── Figure / tipped-in callout ─────────────────────────── */
+				.figure {
+					margin: 1.5rem 0;
+					border: 1px solid var(--ink);
+					background: var(--paper-deep);
+					padding: 1.25rem 1.25rem 1rem;
+					position: relative;
+					box-shadow: 3px 3px 0 var(--ink-blue);
+					border-radius: 2px;
+				}
+				.figure__label {
+					font-family: var(--f-mono);
+					font-size: .72rem;
+					font-weight: 500;
+					letter-spacing: .08em;
+					text-transform: uppercase;
+					color: var(--ink-blue);
+					margin-bottom: .5rem;
+					display: block;
+				}
+				.figure__body {
+					font-family: var(--f-mono);
+					font-size: .8rem;
+					color: var(--ink);
+					line-height: 1.6;
+					white-space: pre;
+					overflow-x: auto;
+				}
+
+				/* ── Alert / errata block ────────────────────────────────── */
+				.alert {
+					border-left: 4px solid var(--ink-rubric);
+					background: rgba(184,50,41,.06);
+					padding: 1rem 1.25rem;
+					margin: 1.25rem 0;
+					border-radius: 0 2px 2px 0;
+				}
+				.alert__title {
+					font-family: var(--f-display);
+					font-size: 1rem;
+					text-transform: uppercase;
+					letter-spacing: .02em;
+					color: var(--ink-rubric);
+					margin-bottom: .35rem;
+				}
+				.alert__body {
+					color: var(--ink);
+					font-size: .95rem;
+				}
+
 				.privacy-block {
-					background: var(--surface);
-					border: 1px solid var(--hair);
-					border-radius: 8px;
+					background: var(--paper-deep);
+					border: 1px solid var(--ink);
+					border-radius: 2px;
+					box-shadow: 3px 3px 0 var(--ink-blue);
 					padding: 1.75rem 2rem;
 					max-width: 640px;
 					margin-block: 1.5rem;
 				}
 				.privacy-block p { margin-bottom: .875rem; }
 				.privacy-block p:last-child { margin-bottom: 0; }
-				.privacy-block a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+				.privacy-block a { color: var(--ink-rubric); text-decoration: none; }
+				.privacy-block a:hover { text-decoration: underline; }
 
 				/* ── Connect tabs ───────────────────────────────────── */
 				.tabs-nav {
@@ -551,8 +706,8 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				.tab-screenshot img {
 					width: 100%;
 					max-width: 840px;
-					border-radius: 8px;
-					border: 1px solid var(--hair);
+					border-radius: 2px;
+					border: 1px solid var(--ink);
 					display: block;
 					margin-inline: auto;
 				}
@@ -564,7 +719,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					aspect-ratio: 16/9;
 					background: var(--surface);
 					border: 1px dashed var(--subtle);
-					border-radius: 8px;
+					border-radius: 2px;
 					display: flex;
 					align-items: center;
 					justify-content: center;
@@ -587,9 +742,9 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					display: flex;
 					align-items: center;
 					gap: .75rem;
-					background: var(--surface);
-					border: 1px solid var(--hair);
-					border-radius: 6px;
+					background: var(--paper-deep);
+					border: 1px solid var(--ink-hair);
+					border-radius: 2px;
 					padding: .75rem 1rem;
 					cursor: pointer;
 					max-width: 480px;
@@ -653,7 +808,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					font-family: var(--f-body);
 					font-size: var(--tx-lg);
 					font-style: italic;
-					color: rgba(237,232,223,.72);
+					color: var(--ink-soft);
 					line-height: 1.65;
 					margin-bottom: 1.5rem;
 					animation: reveal .7s var(--ease) 80ms both;
@@ -720,7 +875,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					font-style: italic;
 					font-size: var(--tx-lg);
 					line-height: 1.6;
-					color: rgba(237,232,223,.8);
+					color: var(--ink-soft);
 					margin-bottom: 0;
 				}
 
@@ -748,7 +903,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					font-family: var(--f-mono);
 					font-size: .7875rem;
 					line-height: 1.65;
-					color: rgba(237,232,223,.7);
+					color: var(--ink-soft);
 				}
 
 				.prose code {
@@ -781,7 +936,7 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					font-weight: 500;
 					color: var(--subtle);
 					padding: .625rem .875rem;
-					border-bottom: 1px solid rgba(237,232,223,.12);
+					border-bottom: 1px solid var(--ink-hair);
 					text-align: left;
 				}
 
@@ -812,29 +967,34 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 			</div>
 			<header class="site-header">
 				<div class="shell site-header__inner">
-					<a href="/" class="site-logo" aria-label="Marcus — home">${siteLogoMarkup}</a>
-					<span class="site-header__pill">Second Brain</span>
+					<a href="/" class="brand" aria-label="Marcus — home">${siteLogoMarkup}</a>
+					<span class="header-meta">v0.2.0</span>
 				</div>
 			</header>
 			<main class="site-main">
 				<div class="shell">${content}</div>
 			</main>
 			<footer class="site-footer" role="contentinfo">
-				<nav class="site-footer-nav" aria-label="Site navigation">
-					<a href="/">Home</a>
-					<span aria-hidden="true">·</span>
-					<a href="/privacy">Privacy</a>
-					<span aria-hidden="true">·</span>
-					<a href="/terms">Terms</a>
-					<span aria-hidden="true">·</span>
-					<a href="https://github.com/romacv/marcus-source-code" rel="noopener">GitHub</a>
-				</nav>
-				<p class="site-footer-meta">
-					Marcus — Second Brain ·
-					<a href="https://github.com/romacv/marcus-source-code/blob/main/LICENSE" rel="noopener">BUSL-1.1</a> ·
-					© 2026 Roman Resenchuk ·
-					<a href="mailto:r@resrom.com">r@resrom.com</a>
-				</p>
+				<div class="shell">
+					<nav class="toc" aria-label="Sitemap">
+						<ol class="toc__list">
+							<li class="toc__row"><a href="/"><span>Home</span></a><span class="pg">/</span></li>
+							<li class="toc__row"><a href="/vault/install"><span>Install on your vault</span></a><span class="pg">/vault/install</span></li>
+							<li class="toc__row"><a href="/vault/error"><span>Vault setup failed</span></a><span class="pg">/vault/error</span></li>
+							<li class="toc__row"><a href="/vault/conflict"><span>Vault name conflict</span></a><span class="pg">/vault/conflict</span></li>
+							<li class="toc__row"><a href="/privacy"><span>Privacy</span></a><span class="pg">/privacy</span></li>
+							<li class="toc__row"><a href="/terms"><span>Terms</span></a><span class="pg">/terms</span></li>
+						</ol>
+					</nav>
+					<div class="footer-meta">
+						<span>© 2026</span>
+						<span>Marcus Second Brain ·
+							<a href="https://github.com/romacv/marcus-source-code/blob/main/LICENSE" rel="noopener">BUSL-1.1</a> ·
+							<a href="https://github.com/romacv/marcus-source-code" rel="noopener">GitHub</a> ·
+							<a href="mailto:r@resrom.com">r@resrom.com</a>
+						</span>
+					</div>
+				</div>
 			</footer>
 		</body>
 	</html>
