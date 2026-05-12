@@ -4,7 +4,7 @@
 
 | Tier | Monthly | Annual | MCP calls/day | Заметки | AI |
 |---|---|---|---|---|---|
-| Free | $0 | $0 | 50 | 100 max | BYOK only |
+| Free | $0 | $0 | 30 | 100 max | BYOK only |
 | Pro | $10/mo | $96/year ($8/mo) | 1000 | Unlimited | BYOK or proxy |
 | Pro Plus | $15/mo | $144/year ($12/mo) | 5000 | Unlimited + voice | Proxy default + BYOK |
 | Founders Lifetime | $99 one-time | — | Pro Plus level | Unlimited | BYOK or proxy |
@@ -26,7 +26,7 @@ Annual discount 20%. Education и non-profit 40% off (matches Obsidian).
 
 Ниже $10 — reads as commodity. Выше $20 — нужно hardware или enterprise positioning.
 
-**Free tier 50 calls/day:**
+**Free tier 30 calls/day:**
 - ~5 chat sessions per day — достаточно почувствовать value
 - Достаточно тесно для conversion на Pro
 - BYOK only защищает unit economics на free

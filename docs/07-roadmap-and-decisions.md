@@ -24,7 +24,7 @@
 
 ### Pricing
 
-- [x] Free $0: 50 MCP calls/day, 100 notes max, BYOK only
+- [x] Free $0: 30 MCP calls/day, 100 notes max, BYOK only
 - [x] Pro $10/mo ($96/year): 1000 calls/day, unlimited notes, hybrid AI
 - [x] Pro Plus $15/mo ($144/year): 5000 calls/day, voice, multi-device
 - [x] Founders Lifetime $99 one-time
@@ -102,7 +102,7 @@ Ranked by downstream consequence:
 4. **Knowledge organization** - hybrid retrieval, выбор между Neo4j managed service vs JSON-derived в репо отложен до v1.1
 5. **PWA-only vs native iOS** - native iOS первый (founder background), PWA параллельно
 6. **Bootstrap vs raise** - открыто, recommendation bootstrap или small seed <$1.5M
-7. **Free-tier shape** - решено MCP call cap 50/day
+7. **Free-tier shape** - решено MCP call cap 30/day
 8. **Open-source posture** - решено OSS server + sync engine, closed knowledge-graph compute
 
 ## GTM план (organic)
