@@ -1,3 +1,5 @@
+> 🔓 **Open source.** Your notes live in **your** GitHub repo — we never store them on our servers. [Audit the code on GitHub](https://github.com/romacv/marcus-source-code).
+
 # Marcus - Second Brain
 
 Marcus remembers everything you discuss with Claude, ChatGPT, and Perplexity — and stores it as private markdown notes in your own GitHub repository.

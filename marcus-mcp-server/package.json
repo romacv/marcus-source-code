@@ -1,7 +1,7 @@
 {
 	"name": "marcus-mcp-server",
 	"version": "0.1.0",
-	"license": "MIT",
+	"license": "BUSL-1.1",
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",

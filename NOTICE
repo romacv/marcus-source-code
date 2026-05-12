@@ -1,0 +1,30 @@
+Marcus — Second Brain
+Copyright © 2026 Roman Resenchuk
+
+This software is licensed under the Business Source License 1.1
+(BUSL-1.1). See the LICENSE file in the root of this repository for the
+full license text.
+
+Effective 2030-05-12, this software will be relicensed under the
+Apache License, Version 2.0.
+
+────────────────────────────────────────────────────────────────────────
+
+Third-party dependencies
+
+Marcus depends on open-source software. Each dependency retains its own
+license; see the SBOM produced by `.github/workflows/sbom-slsa.yml` (in
+CycloneDX JSON format) for the canonical machine-readable list, or
+`marcus-mcp-server/package.json` for the source-of-truth declared
+dependencies.
+
+────────────────────────────────────────────────────────────────────────
+
+Trademark
+
+"Marcus", "Marcus — Second Brain", and the Marcus logo are unregistered
+trademarks of Roman Resenchuk. The license granted by the BUSL-1.1 does
+not include any right to use these marks for products or services other
+than identifying unmodified copies of the Licensed Work. See LICENSE
+section "This License does not grant you any right in any trademark or
+logo of Licensor".

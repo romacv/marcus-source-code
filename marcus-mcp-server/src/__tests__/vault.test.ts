@@ -54,7 +54,7 @@ test("provisionVault creates the repo, bootstraps main, and seeds the rest atomi
 	}) as typeof fetch;
 
 	try {
-		await provisionVault("gho_test", "romacv", "test-key");
+		await provisionVault("gho_test", "testuser", "test-key");
 	} finally {
 		globalThis.fetch = originalFetch;
 	}
@@ -92,7 +92,7 @@ test("vaultRepoState returns 'none' when repo is missing (404)", async () => {
 		new Response(JSON.stringify({ message: "Not Found" }), { status: 404 })) as typeof fetch;
 
 	try {
-		const state = await vaultRepoState("gho_test", "romacv", "test-key");
+		const state = await vaultRepoState("gho_test", "testuser", "test-key");
 		assert.equal(state, "none");
 	} finally {
 		globalThis.fetch = originalFetch;
@@ -111,7 +111,7 @@ test("vaultRepoState returns 'conflict' when repo exists but sentinel is missing
 	}) as typeof fetch;
 
 	try {
-		const state = await vaultRepoState("gho_test", "romacv", "test-key");
+		const state = await vaultRepoState("gho_test", "testuser", "test-key");
 		assert.equal(state, "conflict");
 		assert.equal(callIndex, 2);
 	} finally {
@@ -125,7 +125,7 @@ test("vaultRepoState returns 'vault' when sentinel file exists", async () => {
 		new Response(JSON.stringify({ id: 1 }), { status: 200 })) as typeof fetch;
 
 	try {
-		const state = await vaultRepoState("gho_test", "romacv", "test-key");
+		const state = await vaultRepoState("gho_test", "testuser", "test-key");
 		assert.equal(state, "vault");
 	} finally {
 		globalThis.fetch = originalFetch;
@@ -138,7 +138,7 @@ test("vaultRepoState fails closed to 'conflict' on unexpected repo lookup error"
 		new Response(JSON.stringify({ message: "Server error" }), { status: 500 })) as typeof fetch;
 
 	try {
-		const state = await vaultRepoState("gho_test", "romacv", "test-key");
+		const state = await vaultRepoState("gho_test", "testuser", "test-key");
 		assert.equal(state, "conflict");
 	} finally {
 		globalThis.fetch = originalFetch;

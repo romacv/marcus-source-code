@@ -158,40 +158,62 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					padding-block: clamp(2.5rem,6vw,5rem) 6rem;
 				}
 
-				/* ── Footer ─────────────────────────────────────────────── */
+				/* ── OSS Banner ─────────────────────────────────────────── */
+				.oss-banner {
+					background: #F7F7F8;
+					border-bottom: 1px solid #E5E5E7;
+					padding: 8px 16px;
+					text-align: center;
+					font-size: 14px;
+					line-height: 1.4;
+					color: #1A1A1A;
+				}
+				.oss-banner p { margin: 0; }
+				.oss-banner a {
+					color: #1A1A1A;
+					text-decoration: underline;
+					font-weight: 600;
+				}
+				.oss-banner a:hover { color: #000; }
+
+				@media (max-width: 480px) {
+					.oss-banner { font-size: 13px; padding: 8px 12px; }
+				}
+
+				/* ── Site Footer ─────────────────────────────────────────── */
 				.site-footer {
-					border-top: 1px solid var(--hair);
-					padding-block: 1.5rem;
+					margin-top: 64px;
+					padding: 24px 16px;
+					border-top: 1px solid #E5E5E7;
+					background: #FAFAFA;
+					text-align: center;
+					font-size: 14px;
+					line-height: 1.5;
+					color: #6B6B6F;
 				}
-
-				.site-footer__row {
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					flex-wrap: wrap;
-					gap: .5rem 1rem;
+				.site-footer-nav {
+					margin-bottom: 8px;
 				}
-
-				.site-footer__item {
-					font-family: var(--f-mono);
-					font-size: var(--tx-xs);
-					letter-spacing: .07em;
-					color: var(--subtle);
-				}
-
-				.site-footer__sep {
-					width: 3px;
-					height: 3px;
-					border-radius: 50%;
-					background: var(--hair);
-					flex-shrink: 0;
-				}
-
-				.site-footer__link {
+				.site-footer-nav a {
+					color: #1A1A1A;
 					text-decoration: none;
-					transition: color 150ms ease;
+					margin: 0 4px;
 				}
-				.site-footer__link:hover { color: var(--text); }
+				.site-footer-nav a:hover { text-decoration: underline; }
+				.site-footer-meta {
+					margin: 0;
+					font-size: 13px;
+				}
+				.site-footer-meta a {
+					color: #6B6B6F;
+					text-decoration: underline;
+				}
+				.site-footer-meta a:hover { color: #1A1A1A; }
+
+				@media (max-width: 480px) {
+					.site-footer { font-size: 13px; padding: 20px 12px; }
+					.site-footer-meta { font-size: 12px; }
+				}
 
 				/* ── Legal pages ─────────────────────────────────────────── */
 				.legal-page {
@@ -781,6 +803,13 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 			</style>
 		</head>
 		<body>
+			<div class="oss-banner" role="region" aria-label="Open source notice">
+				<p>
+					<strong>Open source.</strong>
+					Your notes live in <strong>your</strong> GitHub repo — we never store them on our servers.
+					<a href="https://github.com/romacv/marcus-source-code" rel="noopener">Audit the code →</a>
+				</p>
+			</div>
 			<header class="site-header">
 				<div class="shell site-header__inner">
 					<a href="/" class="site-logo" aria-label="Marcus — home">${siteLogoMarkup}</a>
@@ -790,18 +819,22 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 			<main class="site-main">
 				<div class="shell">${content}</div>
 			</main>
-			<footer class="site-footer">
-				<div class="shell site-footer__row">
-					<span class="site-footer__item">Marcus</span>
-					<span class="site-footer__sep" aria-hidden="true"></span>
-					<span class="site-footer__item">Second Brain</span>
-					<span class="site-footer__sep" aria-hidden="true"></span>
-					<a class="site-footer__item site-footer__link" href="/privacy">Privacy</a>
-					<span class="site-footer__sep" aria-hidden="true"></span>
-					<a class="site-footer__item site-footer__link" href="/terms">Terms</a>
-					<span class="site-footer__sep" aria-hidden="true"></span>
-					<span class="site-footer__item">${new Date().getFullYear()}</span>
-				</div>
+			<footer class="site-footer" role="contentinfo">
+				<nav class="site-footer-nav" aria-label="Site navigation">
+					<a href="/">Home</a>
+					<span aria-hidden="true">·</span>
+					<a href="/privacy">Privacy</a>
+					<span aria-hidden="true">·</span>
+					<a href="/terms">Terms</a>
+					<span aria-hidden="true">·</span>
+					<a href="https://github.com/romacv/marcus-source-code" rel="noopener">GitHub</a>
+				</nav>
+				<p class="site-footer-meta">
+					Marcus — Second Brain ·
+					<a href="https://github.com/romacv/marcus-source-code/blob/main/LICENSE" rel="noopener">BUSL-1.1</a> ·
+					© 2026 Roman Resenchuk ·
+					<a href="mailto:r@resrom.com">r@resrom.com</a>
+				</p>
 			</footer>
 		</body>
 	</html>

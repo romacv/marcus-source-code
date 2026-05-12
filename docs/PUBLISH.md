@@ -25,7 +25,7 @@ Distribution channels for the MCP server / app. Work top-to-bottom; each section
 
 ## 1. GitHub Marketplace
 
-URL: https://github.com/marketplace/marcus-second-brain/edit
+URL: https://github.com/marketplace/<your-app-slug>/edit (account-specific; visible only to the listing owner)
 
 GitHub Marketplace requires the listing to be a **GitHub App** or **GitHub Action**. Confirm which one applies.
 
@@ -53,7 +53,7 @@ Docs: https://docs.github.com/en/apps/publishing-apps-to-github-marketplace
 
 Console: https://platform.openai.com/apps-manage
 Submission docs: https://developers.openai.com/apps-sdk/deploy/submission
-Current draft: https://platform.openai.com/apps-manage/edit/asdk_app_69fd5a43c6708191aaaad4fe4ce67728/asdk_app_v_69fd5a45387c819182f9eb90e2e33ce6
+Current draft: visible only to the OpenAI account that owns the app; access via https://platform.openai.com/apps-manage
 
 - [ ] App Info section
   - [ ] Name, tagline, full description
@@ -157,7 +157,7 @@ Marcus is an MCP server — list it everywhere MCP clients discover servers.
 | Channel | Draft | Submitted | Approved | Live | Notes |
 |---|---|---|---|---|---|
 | GitHub Marketplace | ☐ | ☐ | ☐ | ☐ | edit URL on file |
-| OpenAI Apps SDK | ☑ | ☐ | ☐ | ☐ | draft `asdk_app_v_69fd...` |
+| OpenAI Apps SDK | ☑ | ☐ | ☐ | ☐ | draft created |
 | Claude Plugin Marketplace | ☐ | ☐ | ☐ | ☐ | |
 | MCP servers list (PR) | ☐ | ☐ | n/a | ☐ | |
 | Smithery | ☐ | ☐ | ☐ | ☐ | |
