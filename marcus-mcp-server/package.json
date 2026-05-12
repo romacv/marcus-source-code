@@ -10,6 +10,8 @@
 		"start": "wrangler dev",
 		"cf-typegen": "wrangler types",
 		"test": "node --test --experimental-strip-types src/__tests__/*.test.ts",
+		"test:integration": "vitest run --config vitest.config.mts",
+		"test:all": "npm test && npm run test:integration",
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -19,11 +21,13 @@
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.16.3",
 		"@types/node": "^25.6.0",
 		"marked": "^17.0.5",
 		"oxfmt": "^0.43.0",
 		"oxlint": "^1.58.0",
 		"typescript": "6.0.2",
+		"vitest": "^4.1.5",
 		"wrangler": "^4.79.0"
 	}
 }
