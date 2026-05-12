@@ -187,6 +187,67 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					flex-shrink: 0;
 				}
 
+				.site-footer__link {
+					text-decoration: none;
+					transition: color 150ms ease;
+				}
+				.site-footer__link:hover { color: var(--text); }
+
+				/* ── Legal pages ─────────────────────────────────────────── */
+				.legal-page {
+					max-width: 720px;
+					padding-block: clamp(3rem,5vw,5rem);
+				}
+				.legal-page h1 {
+					font-family: var(--f-display);
+					font-size: var(--tx-2xl);
+					font-weight: 700;
+					letter-spacing: -.02em;
+					line-height: 1.1;
+					margin-bottom: .5rem;
+				}
+				.legal-page .legal-meta {
+					font-family: var(--f-mono);
+					font-size: var(--tx-xs);
+					letter-spacing: .07em;
+					color: var(--muted);
+					margin-bottom: 2.5rem;
+				}
+				.legal-page .legal-lead {
+					color: var(--muted);
+					font-style: italic;
+					margin-bottom: 2.5rem;
+					font-size: var(--tx-lg);
+					line-height: 1.65;
+				}
+				.legal-page h2 {
+					font-family: var(--f-display);
+					font-size: var(--tx-lg);
+					font-weight: 600;
+					letter-spacing: -.01em;
+					margin-top: 2.25rem;
+					margin-bottom: .75rem;
+					padding-top: 2rem;
+					border-top: 1px solid var(--hair);
+				}
+				.legal-page p {
+					color: var(--muted);
+					line-height: 1.78;
+					margin-bottom: 1rem;
+				}
+				.legal-page ul {
+					color: var(--muted);
+					line-height: 1.78;
+					padding-left: 1.4rem;
+					margin-bottom: 1rem;
+				}
+				.legal-page ul li { margin-bottom: .5rem; }
+				.legal-page a {
+					color: var(--accent);
+					text-decoration: none;
+				}
+				.legal-page a:hover { text-decoration: underline; }
+
 				/* ── Animations ─────────────────────────────────────────── */
 				@keyframes reveal {
 					from { opacity: 0; transform: translateY(12px); }
@@ -735,7 +796,9 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					<span class="site-footer__sep" aria-hidden="true"></span>
 					<span class="site-footer__item">Second Brain</span>
 					<span class="site-footer__sep" aria-hidden="true"></span>
-					<span class="site-footer__item">MIT</span>
+					<a class="site-footer__item site-footer__link" href="/privacy">Privacy</a>
+					<span class="site-footer__sep" aria-hidden="true"></span>
+					<a class="site-footer__item site-footer__link" href="/terms">Terms</a>
 					<span class="site-footer__sep" aria-hidden="true"></span>
 					<span class="site-footer__item">${new Date().getFullYear()}</span>
 				</div>
@@ -941,9 +1004,9 @@ export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => 
 		<div class="privacy-block">
 			<!-- Remove this badge after beta -->
 			<span class="beta-badge">Free for Now</span>
-			<p>Marcus is contentless by design. Your note content never passes through or is stored on Marcus servers. Marcus only stores a mapping from your Marcus user ID to your GitHub App installation ID, and short-lived OAuth tokens (TTL 24h).</p>
+			<p>Marcus is contentless by design. Your note content never passes through or is stored on Marcus servers. Marcus only stores a mapping from your Marcus user ID to your GitHub App installation ID, and short-lived OAuth tokens (typically ~1 hour, set by GitHub).</p>
 			<p>All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens.</p>
-			<p>Marcus is <strong>free during beta</strong>. After beta, a free tier (50 MCP calls/day) stays free. Pro unlocks 1,000 calls/day, unlimited notes, and more — at $10/month.</p>
+			<p>Marcus is <strong>free during beta</strong>. After beta, a free tier (30 MCP calls/day) stays free. Pro unlocks 1,000 calls/day, unlimited notes, and more — at $10/month.</p>
 			<p>To revoke access: go to <a href="https://github.com/settings/installations" target="_blank" rel="noopener noreferrer">github.com/settings/installations</a>, find Marcus, and click Uninstall. Your vault repo and all notes stay in your GitHub account.</p>
 		</div>
 	</section>
@@ -982,4 +1045,131 @@ export const homeContent = async (_req: Request): Promise<HtmlEscapedString> => 
 	  }
 	}
 	</script>
+`;
+
+export const privacyContent = async (): Promise<HtmlEscapedString> => html`
+	<div class="legal-page">
+		<p class="section__eyebrow">Legal</p>
+		<h1>Privacy Policy</h1>
+		<p class="legal-meta">Effective 2026-05-11</p>
+		<p class="legal-lead">Marcus is a contentless second brain. Your notes live in your own private GitHub repository; the Marcus server stores only the minimum identifiers needed to authenticate you to GitHub and enforce rate limits.</p>
+
+		<h2>Who we are</h2>
+		<p>Marcus Second Brain operates this service. Contact: <a href="mailto:r@resrom.com">r@resrom.com</a>.</p>
+
+		<h2>Data we collect</h2>
+		<p>Marcus stores only what is strictly required to route your requests to GitHub and enforce fair-use limits:</p>
+		<ul>
+			<li><strong>GitHub identifiers</strong> — your numeric GitHub user ID (<code>userId</code>), GitHub username (<code>githubLogin</code>), GitHub App installation ID (<code>installationId</code>), and the name of your private vault repository (<code>repoName</code>). These form the user → installation mapping that persists until you uninstall.</li>
+			<li><strong>GitHub App access token</strong> — stored AES-256-GCM encrypted in Cloudflare KV under the key <code>install_token:{installationId}</code>. TTL: inherited from GitHub's <code>expires_at</code> (typically ~1 hour); refreshed automatically on demand.</li>
+			<li><strong>OAuth state nonce</strong> — a short-lived random token stored under <code>state:{nonce}</code> during the GitHub OAuth install flow for CSRF protection. Expires within minutes (TTL: 1800 seconds).</li>
+			<li><strong>Rate-limit counter</strong> — an integer stored under <code>rl:{userId}:{YYYY-MM-DD}</code>. TTL: 48 hours (survives the UTC midnight rollover).</li>
+			<li>No other persistent server-side data is stored.</li>
+		</ul>
+
+		<h2>Data we do NOT collect</h2>
+		<ul>
+			<li>Note content — your notes live exclusively in your private GitHub repository. Marcus writes there only under the access you grant.</li>
+			<li>AI conversation transcripts.</li>
+			<li>Email body content.</li>
+			<li>Usage analytics, cross-site tracking, or fingerprinting.</li>
+			<li>Tracking cookies. A short-lived OAuth session cookie may be set during the install flow solely to complete GitHub authentication; it is not used for tracking and expires with the session.</li>
+		</ul>
+
+		<h2>Encryption</h2>
+		<p>GitHub access tokens are encrypted at rest using <strong>AES-256-GCM</strong> before being written to Cloudflare KV. The encryption key lives in a Cloudflare Worker environment secret (<code>KV_ENCRYPTION_KEY</code>) and is never logged or transmitted outside the Worker runtime.</p>
+
+		<h2>Retention</h2>
+		<ul>
+			<li><strong>OAuth state nonce</strong>: minutes (TTL 1800 seconds).</li>
+			<li><strong>GitHub access token</strong>: typically ~1 hour (inherits GitHub's <code>expires_at</code>); refreshed automatically on demand.</li>
+			<li><strong>User → installation mapping</strong>: persisted until you uninstall the Marcus GitHub App.</li>
+			<li><strong>Rate-limit counter</strong>: 48 hours (typically rolls daily at UTC midnight).</li>
+		</ul>
+
+		<h2>Third parties</h2>
+		<ul>
+			<li><strong>GitHub (data processor)</strong> — hosts your notes in your private repository and provides OAuth and App authentication. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub Privacy Statement ↗</a></li>
+			<li><strong>Cloudflare (infrastructure)</strong> — Marcus runs on Cloudflare Workers and KV. Cloudflare may process request metadata (IP addresses, timestamps) as part of operating the platform. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare Privacy Policy ↗</a></li>
+			<li><strong>MCP clients (Claude Desktop, ChatGPT, etc.)</strong> — your interactions with the MCP client itself are governed by that client's privacy policy, not Marcus's.</li>
+		</ul>
+
+		<h2>Your rights</h2>
+		<ul>
+			<li><strong>Revoke access</strong>: visit <a href="https://github.com/settings/installations" target="_blank" rel="noopener noreferrer">GitHub Settings → Installed GitHub Apps</a>, find Marcus, and click Uninstall.</li>
+			<li><strong>Export your data</strong>: your notes are already in your GitHub repository — clone it. No additional Marcus-side export is needed.</li>
+			<li><strong>Delete your data</strong>: uninstalling the GitHub App removes Marcus's access. Email <a href="mailto:r@resrom.com">r@resrom.com</a> to purge the user → installation mapping from KV before its natural expiry.</li>
+			<li><strong>GDPR / CCPA rights</strong>: you have rights of access, rectification, erasure, restriction, portability, and objection. Email <a href="mailto:r@resrom.com">r@resrom.com</a> to exercise any of these.</li>
+		</ul>
+
+		<h2>No tracking</h2>
+		<p>Marcus runs no analytics scripts, no third-party trackers, and no fingerprinting code. The only outbound calls Marcus makes are to GitHub APIs on your behalf.</p>
+
+		<h2>Children</h2>
+		<p>Marcus is not directed at children under 13. We do not knowingly collect data from children.</p>
+
+		<h2>Changes to this policy</h2>
+		<p>If this policy materially changes, the effective date below will update and we will announce the change on the Marcus homepage. Continued use after that date constitutes acceptance.</p>
+
+		<h2>Contact</h2>
+		<p>Marcus Second Brain · <a href="mailto:r@resrom.com">r@resrom.com</a> · Effective 2026-05-11</p>
+	</div>
+`;
+
+export const termsContent = async (): Promise<HtmlEscapedString> => html`
+	<div class="legal-page">
+		<p class="section__eyebrow">Legal</p>
+		<h1>Terms of Service</h1>
+		<p class="legal-meta">Effective 2026-05-11</p>
+		<p class="legal-lead">These terms govern your use of Marcus Second Brain.</p>
+
+		<h2>Acceptance</h2>
+		<p>By installing the Marcus GitHub App and using the service, you agree to these terms. If you do not agree, do not use Marcus.</p>
+
+		<h2>Service description</h2>
+		<p>Marcus is a contentless second brain that connects MCP clients (Claude Desktop, ChatGPT, Perplexity, and others) to a private GitHub repository you own. The repository is the storage layer for your notes; Marcus is the routing and protocol layer. Marcus does not store, read, or process the content of your notes beyond what is necessary to write them to GitHub on your behalf.</p>
+
+		<h2>Your account</h2>
+		<p>Your account is your GitHub identity. One Marcus install is permitted per GitHub user. You are responsible for keeping your GitHub credentials secure. Activity under your GitHub account is your responsibility.</p>
+
+		<h2>Acceptable use</h2>
+		<p>You may not use Marcus to:</p>
+		<ul>
+			<li>Store or distribute illegal content, including content that violates applicable sanctions laws.</li>
+			<li>Attack, probe, or attempt to disrupt GitHub or Cloudflare infrastructure via Marcus.</li>
+			<li>Harass, spam, or abuse other users through any Marcus-touched channel.</li>
+			<li>Reverse-engineer Marcus to circumvent rate limits, billing, or access controls.</li>
+			<li>Operate automated bots or scrapers that exceed reasonable use of the service.</li>
+			<li>Build a competing product or service using Marcus in violation of these terms.</li>
+		</ul>
+
+		<h2>Pricing &amp; billing</h2>
+		<p>During beta, Marcus is free. Free use is rate-limited to <strong>30 calls per UTC day</strong>. A future Pro tier with higher limits will be announced before any charges occur. We will not auto-charge you without explicit consent. Pricing changes will be communicated on the homepage and, where possible, via the email associated with your account.</p>
+
+		<h2>Intellectual property</h2>
+		<p>Your notes belong to you. Marcus writes to your private GitHub repository under the access you granted; you can revoke that access at any time via GitHub Settings.</p>
+		<p>The Marcus software is proprietary. The source repository is public for transparency only. No license is granted to redistribute, sublicense, fork for commercial use, or build a derivative service. All rights not expressly stated are reserved.</p>
+		<p>The names "Marcus" and "Marcus Second Brain" and associated logos are property of the operator.</p>
+
+		<h2>Warranty disclaimer</h2>
+		<p>Marcus is provided "as is" and "as available", without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement. During beta there is no service-level agreement; we operate on a best-effort basis.</p>
+
+		<h2>Limitation of liability</h2>
+		<p>To the maximum extent permitted by applicable law, the operator's total liability arising out of or related to these terms or your use of Marcus is limited to the amounts you have paid the operator in the 12 months preceding the claim, or fifty US dollars (US$50), whichever is greater. The operator is not liable for indirect, incidental, consequential, special, or punitive damages.</p>
+
+		<h2>Indemnification</h2>
+		<p>You agree to indemnify and hold the operator harmless from claims arising out of your violation of these terms or your misuse of the service. During beta, please bring issues to <a href="mailto:r@resrom.com">r@resrom.com</a> before taking formal action — we want to fix problems.</p>
+
+		<h2>Termination</h2>
+		<p>You can terminate at any time by uninstalling the Marcus GitHub App from <a href="https://github.com/settings/installations" target="_blank" rel="noopener noreferrer">GitHub Settings → Installed GitHub Apps</a>. We may suspend or terminate access for violations of these terms; where reasonable, we will provide advance notice.</p>
+
+		<h2>Changes to these terms</h2>
+		<p>We may update these terms. Material changes will bump the effective date and be announced on the homepage. Continued use after the effective date constitutes acceptance.</p>
+
+		<h2>Governing law</h2>
+		<p>These terms are governed by the laws of the jurisdiction in which the operator is established, without regard to conflict-of-law principles. Any dispute arising out of these terms will be resolved exclusively in the courts of that jurisdiction.</p>
+
+		<h2>Contact</h2>
+		<p>Marcus Second Brain · <a href="mailto:r@resrom.com">r@resrom.com</a> · Effective 2026-05-11</p>
+	</div>
 `;

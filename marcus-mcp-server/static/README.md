@@ -64,7 +64,7 @@ Marcus is **contentless by design**. Your note content never passes through or i
 - A mapping from your Marcus user ID to your GitHub App installation ID
 - Short-lived OAuth tokens (TTL 24h)
 
-All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens. The server is [MIT-licensed and open source](https://github.com/romacv/marcus-source-code).
+All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens. The Marcus software is proprietary; the source repository is public for transparency only.
 
 ---
 

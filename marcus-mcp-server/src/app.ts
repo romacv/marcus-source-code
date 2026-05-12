@@ -13,7 +13,7 @@ import {
 	provisionVault,
 	vaultRepoState,
 } from "./github-oauth";
-import { homeContent, layout } from "./utils";
+import { homeContent, layout, privacyContent, termsContent } from "./utils";
 import { findUnrelatedVaultEntries } from "./vault-guard.ts";
 import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
 
@@ -27,6 +27,9 @@ app.get("/", async (c) => {
 	const content = await homeContent(c.req.raw);
 	return c.html(layout(content, "Marcus - Second Brain"));
 });
+
+app.get("/privacy", async (c) => c.html(layout(await privacyContent(), "Privacy · Marcus")));
+app.get("/terms",   async (c) => c.html(layout(await termsContent(),   "Terms · Marcus")));
 
 // Step 1: Claude calls /authorize → redirect to GitHub OAuth
 app.get("/authorize", async (c) => {
