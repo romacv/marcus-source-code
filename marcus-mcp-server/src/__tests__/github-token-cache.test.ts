@@ -29,13 +29,14 @@ test("getCachedInstallationToken returns null when token expires within 2 min", 
 	// expiresAt is 90s from now — less than 120s safety margin
 	const expiresAt = Date.now() + 90_000;
 	const payload = JSON.stringify({ token: "ghs_test", expiresAt });
-	const encrypted = await encryptForKv(TEST_KEY, payload);
-	store.set(`install_token:${INSTALLATION_ID}`, encrypted);
+	const kvKey = `install_token:${INSTALLATION_ID}`;
+	const encrypted = await encryptForKv(TEST_KEY, payload, new TextEncoder().encode(kvKey));
+	store.set(kvKey, encrypted);
 
 	const result = await getCachedInstallationToken(kv, TEST_KEY, INSTALLATION_ID);
 	assert.equal(result, null);
 	// Expired entry should have been deleted
-	assert.equal(store.has(`install_token:${INSTALLATION_ID}`), false);
+	assert.equal(store.has(kvKey), false);
 });
 
 test("getCachedInstallationToken returns token when valid", async () => {
@@ -43,8 +44,9 @@ test("getCachedInstallationToken returns token when valid", async () => {
 	const kv = makeKv(store);
 	const expiresAt = Date.now() + 30 * 60 * 1000; // 30 min from now
 	const payload = JSON.stringify({ token: "ghs_valid", expiresAt });
-	const encrypted = await encryptForKv(TEST_KEY, payload);
-	store.set(`install_token:${INSTALLATION_ID}`, encrypted);
+	const kvKey = `install_token:${INSTALLATION_ID}`;
+	const encrypted = await encryptForKv(TEST_KEY, payload, new TextEncoder().encode(kvKey));
+	store.set(kvKey, encrypted);
 
 	const result = await getCachedInstallationToken(kv, TEST_KEY, INSTALLATION_ID);
 	assert.equal(result, "ghs_valid");

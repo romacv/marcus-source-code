@@ -15,7 +15,7 @@ export async function getCachedInstallationToken(
 	if (!raw) return null;
 	let parsed: CachedToken;
 	try {
-		const decrypted = await decryptFromKv(encryptionKey, raw);
+		const decrypted = await decryptFromKv(encryptionKey, raw, new TextEncoder().encode(key));
 		parsed = JSON.parse(decrypted) as CachedToken;
 	} catch {
 		await kv.delete(key);
@@ -37,7 +37,8 @@ export async function setCachedInstallationToken(
 ): Promise<void> {
 	const expiresAt = new Date(expiresAtIso).getTime();
 	const ttlS = Math.max(KV_FLOOR_TTL_S, Math.floor((expiresAt - Date.now()) / 1000) - 60);
+	const kvKey = `install_token:${installationId}`;
 	const payload = JSON.stringify({ token, expiresAt } satisfies CachedToken);
-	const encrypted = await encryptForKv(encryptionKey, payload);
-	await kv.put(`install_token:${installationId}`, encrypted, { expirationTtl: ttlS });
+	const encrypted = await encryptForKv(encryptionKey, payload, new TextEncoder().encode(kvKey));
+	await kv.put(kvKey, encrypted, { expirationTtl: ttlS });
 }

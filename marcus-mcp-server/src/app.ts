@@ -130,7 +130,7 @@ app.get("/auth/github/callback", async (c) => {
 			return c.redirect("/vault/error");
 		}
 
-		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, verifiedInstallId);
+		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, verifiedInstallId, new TextEncoder().encode(`user:${userId}`));
 		await c.env.MARCUS_KV.put(`user:${userId}`, encrypted);
 
 		const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
@@ -180,7 +180,7 @@ app.get("/auth/github/callback", async (c) => {
 			return c.redirect("/vault/error");
 		}
 
-		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, existingInstallId);
+		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, existingInstallId, new TextEncoder().encode(`user:${userId}`));
 		await c.env.MARCUS_KV.put(`user:${userId}`, encrypted);
 
 		const reqJson = await c.env.MARCUS_KV.get(`state:${statePayload.nonce}`);
