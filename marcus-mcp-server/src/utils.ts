@@ -83,10 +83,6 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				/* ── Base ───────────────────────────────────────────────── */
 				body {
 					background: var(--paper);
-					background-image:
-						linear-gradient(to right,  rgba(27,42,36,.055) 1px, transparent 1px),
-						linear-gradient(to bottom, rgba(27,42,36,.055) 1px, transparent 1px);
-					background-size: 24px 24px;
 					color: var(--ink);
 					font-family: var(--f-body);
 					font-size: var(--tx-base);
@@ -203,8 +199,35 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 					padding-block: clamp(2rem,4vw,3rem) 2rem;
 				}
 
-				/* TOC sitemap */
-				.toc { margin-bottom: 1.5rem; }
+				/* TOC sitemap — collapsible disclosure */
+				.sitemap { margin-bottom: 1.5rem; }
+				.sitemap > summary {
+					font-family: var(--f-mono);
+					font-size: .72rem;
+					letter-spacing: .12em;
+					text-transform: uppercase;
+					color: var(--ink-soft);
+					cursor: pointer;
+					list-style: none;
+					display: inline-flex;
+					align-items: center;
+					gap: .5rem;
+					padding: .25rem 0;
+					user-select: none;
+				}
+				.sitemap > summary::-webkit-details-marker { display: none; }
+				.sitemap > summary::before {
+					content: '+';
+					font-family: var(--f-mono);
+					font-size: .9rem;
+					color: var(--ink);
+					width: .75rem;
+					display: inline-block;
+				}
+				.sitemap[open] > summary::before { content: '−'; }
+				.sitemap > summary:hover { color: var(--ink-rubric); }
+				.sitemap > .toc__list { margin-top: .9rem; }
+
 				.toc__list {
 					list-style: none;
 					padding: 0;
@@ -224,24 +247,21 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 				}
 				.toc__row a {
 					color: var(--ink);
-					text-decoration: none;
-					background-image: radial-gradient(circle, var(--ink-faint) 1px, transparent 1.2px);
-					background-size: 6px 6px;
-					background-repeat: repeat-x;
-					background-position: 0 0.95em;
-					display: block;
+					text-decoration: underline;
+					text-decoration-color: var(--ink-soft);
+					text-decoration-thickness: 1px;
+					text-underline-offset: 3px;
+					background: none;
+					display: inline;
 				}
-				.toc__row a:hover { color: var(--ink-rubric); }
-				.toc__row a span {
-					background: var(--paper);
-					padding-right: 6px;
+				.toc__row a:hover {
+					color: var(--ink-rubric);
+					text-decoration-color: var(--ink-rubric);
 				}
 				.toc__row .pg {
 					font-family: var(--f-mono);
 					font-size: .76rem;
 					color: var(--ink-soft);
-					background: var(--paper);
-					padding-left: 6px;
 				}
 				.footer-meta {
 					font-family: var(--f-mono);
@@ -976,16 +996,19 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 			</main>
 			<footer class="site-footer" role="contentinfo">
 				<div class="shell">
-					<nav class="toc" aria-label="Sitemap">
-						<ol class="toc__list">
-							<li class="toc__row"><a href="/"><span>Home</span></a><span class="pg">/</span></li>
-							<li class="toc__row"><a href="/vault/install"><span>Install on your vault</span></a><span class="pg">/vault/install</span></li>
-							<li class="toc__row"><a href="/vault/error"><span>Vault setup failed</span></a><span class="pg">/vault/error</span></li>
-							<li class="toc__row"><a href="/vault/conflict"><span>Vault name conflict</span></a><span class="pg">/vault/conflict</span></li>
-							<li class="toc__row"><a href="/privacy"><span>Privacy</span></a><span class="pg">/privacy</span></li>
-							<li class="toc__row"><a href="/terms"><span>Terms</span></a><span class="pg">/terms</span></li>
-						</ol>
-					</nav>
+					<details class="sitemap">
+						<summary>Sitemap</summary>
+						<nav class="toc" aria-label="Sitemap">
+							<ol class="toc__list">
+								<li class="toc__row"><a href="/">Home</a><span class="pg">/</span></li>
+								<li class="toc__row"><a href="/vault/install">Install on your vault</a><span class="pg">/vault/install</span></li>
+								<li class="toc__row"><a href="/vault/error">Vault setup failed</a><span class="pg">/vault/error</span></li>
+								<li class="toc__row"><a href="/vault/conflict">Vault name conflict</a><span class="pg">/vault/conflict</span></li>
+								<li class="toc__row"><a href="/privacy">Privacy</a><span class="pg">/privacy</span></li>
+								<li class="toc__row"><a href="/terms">Terms</a><span class="pg">/terms</span></li>
+							</ol>
+						</nav>
+					</details>
 					<div class="footer-meta">
 						<span>© 2026</span>
 						<span>Marcus Second Brain ·
