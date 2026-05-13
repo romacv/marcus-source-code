@@ -80,6 +80,8 @@ app.get("/auth/github/callback", async (c) => {
 		return c.text("Invalid state signature", 400);
 	}
 
+	const STATE_MAX_AGE_MS = 10 * 60 * 1000; // 10 min
+
 	const statePayload = JSON.parse(statePayloadJson) as {
 		nonce: string;
 		ts: number;
@@ -87,10 +89,27 @@ app.get("/auth/github/callback", async (c) => {
 		login?: string;
 	};
 
+	if (typeof statePayload.ts !== "number" || Date.now() - statePayload.ts > STATE_MAX_AGE_MS) {
+		return c.text("State expired. Please connect again.", 400);
+	}
+
 	// --- Phase 2: GitHub App installation callback ---
 	if (installationId && setupAction === "install") {
 		const { userId, login, nonce } = statePayload;
 		if (!userId || !login || !nonce) return c.text("Missing user context in state", 400);
+
+		// Defense-in-depth: confirm the installation_id GitHub redirected with
+		// actually belongs to the user we authenticated in Phase 1.
+		const verifiedInstallId = await findInstallationByLogin(c.env, login, c.env.KV_ENCRYPTION_KEY);
+		if (!verifiedInstallId || verifiedInstallId !== installationId) {
+			const uid = await anonId(login, c.env.KV_ENCRYPTION_KEY);
+			console.warn("[install-binding-mismatch]", JSON.stringify({
+				uid,
+				received: !!installationId,
+				verified: !!verifiedInstallId,
+			}));
+			return c.text("Installation does not belong to authenticated user. Please reinstall.", 400);
+		}
 
 		const reqJson = await c.env.MARCUS_KV.get(`state:${nonce}`);
 		if (!reqJson) return c.text("OAuth session expired. Please connect again.", 400);
@@ -99,7 +118,7 @@ app.get("/auth/github/callback", async (c) => {
 
 		// Seed vault via installation token (has Contents R+W on the repo)
 		try {
-			await seedVaultIfNeeded(c.env, installationId, login);
+			await seedVaultIfNeeded(c.env, verifiedInstallId, login);
 		} catch (error) {
 			const uid = await anonId(login, c.env.KV_ENCRYPTION_KEY);
 			console.error("[seed-vault-failed]", JSON.stringify({
@@ -111,7 +130,7 @@ app.get("/auth/github/callback", async (c) => {
 			return c.redirect("/vault/error");
 		}
 
-		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, installationId);
+		const encrypted = await encryptForKv(c.env.KV_ENCRYPTION_KEY, verifiedInstallId);
 		await c.env.MARCUS_KV.put(`user:${userId}`, encrypted);
 
 		const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
@@ -119,7 +138,7 @@ app.get("/auth/github/callback", async (c) => {
 			userId,
 			metadata: { label: login },
 			scope: oauthReqInfo.scope,
-			props: { userId, installationId, githubLogin: login, repoName: VAULT_REPO_NAME },
+			props: { userId, installationId: verifiedInstallId, githubLogin: login, repoName: VAULT_REPO_NAME },
 		});
 		return c.redirect(redirectTo);
 	}
