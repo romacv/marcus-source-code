@@ -101,6 +101,9 @@ function obsidianAlias(value: string): string {
 	return value.replace(/[\]|]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+const MAX_TOOL_OUTPUT = 100_000;
+const capText = (s: string) => s.length > MAX_TOOL_OUTPUT ? s.slice(0, MAX_TOOL_OUTPUT) + "\n[...truncated]" : s;
+
 function checkVaultPath(path: string): void {
 	try {
 		assertVaultPath(path);
@@ -482,7 +485,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					content: [
 						{
 							type: "text" as const,
-							text: JSON.stringify(merged.slice(0, limit)),
+							text: capText(JSON.stringify(merged.slice(0, limit))),
 						},
 					],
 				};
@@ -523,11 +526,11 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{
 						type: "text" as const,
-						text: JSON.stringify({
+						text: capText(JSON.stringify({
 							tags,
 							recent_topics: recentTopics,
 							folders: [...VAULT_TOPIC_FOLDERS],
-						}),
+						})),
 					}],
 				};
 			}),
@@ -547,7 +550,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				checkVaultPath(path);
 				const file = await this.github.getFile(path);
 				return {
-					content: [{ type: "text" as const, text: file.content }],
+					content: [{ type: "text" as const, text: capText(file.content) }],
 				};
 			}),
 		);
@@ -569,7 +572,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				if (folder) checkVaultPath(`${folder}/.gitkeep`);
 				const tree = await this.github.listTree(folder ?? "");
 				return {
-					content: [{ type: "text" as const, text: JSON.stringify(tree) }],
+					content: [{ type: "text" as const, text: capText(JSON.stringify(tree)) }],
 				};
 			}),
 		);
@@ -835,7 +838,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					}));
 
 				return {
-					content: [{ type: "text" as const, text: JSON.stringify(records) }],
+					content: [{ type: "text" as const, text: capText(JSON.stringify(records)) }],
 				};
 			}),
 		);
@@ -866,10 +869,8 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 							),
 						].join("\n")
 					: "# Marcus memory snapshot\n\nNo active memories.";
-				if (text.length > 100_000) text = text.slice(0, 100_000);
-
 				return {
-					content: [{ type: "text" as const, text }],
+					content: [{ type: "text" as const, text: capText(text) }],
 				};
 			}),
 		);
@@ -979,7 +980,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					if (notes.length >= limit) break;
 				}
 				return {
-					content: [{ type: "text" as const, text: JSON.stringify(notes) }],
+					content: [{ type: "text" as const, text: capText(JSON.stringify(notes)) }],
 				};
 			}),
 		);
