@@ -14,7 +14,7 @@ import {
 	provisionVault,
 	vaultRepoState,
 } from "./github-oauth";
-import { homeContent, layout, privacyContent, termsContent } from "./utils";
+import { homeContent, layout, privacyContent, termsContent, docsContent } from "./utils";
 import { findUnrelatedVaultEntries } from "./vault-guard.ts";
 import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
 
@@ -31,6 +31,7 @@ app.get("/", async (c) => {
 
 app.get("/privacy", async (c) => c.html(layout(await privacyContent(), "Privacy · Marcus")));
 app.get("/terms",   async (c) => c.html(layout(await termsContent(),   "Terms · Marcus")));
+app.get("/docs",    async (c) => c.html(layout(await docsContent(),    "Docs · Marcus")));
 
 // Step 1: Claude calls /authorize → redirect to GitHub OAuth
 app.get("/authorize", async (c) => {
@@ -276,6 +277,17 @@ app.get("/vault/conflict", (c) => {
 	);
 	return c.html(layout(content, "Marcus — Vault conflict"));
 });
+
+app.get("/health", (c) => c.json({ status: "ok", version: "0.3.0", time: new Date().toISOString() }));
+
+app.get("/.well-known/openai-apps-challenge", (c) => c.text("NHECYCw1vJ_CcrJ8-B_50fBjxetHe0RvqR0I41RCdbk"));
+
+app.get("/.well-known/oauth-protected-resource", (c) =>
+	c.json({
+		resource: "https://marcus-second-brain.com/mcp",
+		authorization_servers: ["https://marcus-second-brain.com"],
+	})
+);
 
 app.get("/version", (c) => c.json({ version: "0.2.0", sha: "local-dev" }));
 

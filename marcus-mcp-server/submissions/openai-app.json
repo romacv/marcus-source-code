@@ -1,0 +1,323 @@
+{
+	"$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+	"schema_version": 1,
+	"version": "0.3.0",
+	"app_info": {
+		"display_name": "Marcus — Second Brain",
+		"subtitle": "Private memory vault",
+		"description": "Marcus is a personal knowledge management MCP server that stores your notes, memories, and daily logs in a private GitHub repository you own. It connects to ChatGPT via the Model Context Protocol, giving ChatGPT 14 tools to create, search, retrieve, and link notes — so your conversations can draw on and contribute to a persistent second brain without any extra apps or databases.\n\nEvery piece of data lives in Markdown files inside your own GitHub repo under a structured folder hierarchy (daily notes, topics, projects, people, memories). You control access, you can read the files directly in GitHub, and you can export or delete everything at any time. Marcus uses GitHub OAuth and a GitHub App scoped to a single repository you choose; the installation token is encrypted at rest on the server, never logged, and revocable at any time from your GitHub installation settings.\n\nCommon workflows include capturing book notes or meeting summaries mid-conversation, searching your vault by keyword or topic, appending to a rolling daily note, and storing durable preferences (like writing style or recurring instructions) that ChatGPT retrieves automatically through the `recall` tool.",
+		"category": "PRODUCTIVITY",
+		"launch_date": "2026-05-13"
+	},
+	"server": {
+		"url": "https://marcus-second-brain.com/mcp",
+		"auth": {
+			"type": "oauth2",
+			"authorization_url": "https://marcus-second-brain.com/authorize",
+			"token_url": "https://marcus-second-brain.com/token",
+			"client_registration_url": "https://marcus-second-brain.com/register",
+			"scopes": [
+				"repo"
+			]
+		}
+	},
+	"privacy_policy_url": "https://marcus-second-brain.com/privacy",
+	"terms_of_service_url": "https://marcus-second-brain.com/terms",
+	"support_email": "r@resrom.com",
+	"developer": {
+		"name": "Roman Resenchuk",
+		"email": "r@resrom.com"
+	},
+	"icon_url": "https://marcus-second-brain.com/img/submission/icon-1024.png",
+	"demo_video_url": "https://marcus-second-brain.com/demo.mov",
+	"screenshots": [
+		{
+			"url": "https://marcus-second-brain.com/img/submission/screenshots/openai/s1-1920x1080.png",
+			"caption": "Claude doing math the fancy way \u2014 Marcus stores intermediate results as notes"
+		},
+		{
+			"url": "https://marcus-second-brain.com/img/submission/screenshots/openai/s2-1920x1080.png",
+			"caption": "Network graph view of linked notes in the vault"
+		},
+		{
+			"url": "https://marcus-second-brain.com/img/submission/screenshots/openai/s3-1920x1080.png",
+			"caption": "Hero flow \u2014 saving, searching, and recalling notes in a single conversation"
+		},
+		{
+			"url": "https://marcus-second-brain.com/img/submission/screenshots/openai/s4-1920x1080.png",
+			"caption": "Available tools overview \u2014 all 14 Marcus MCP tools"
+		},
+		{
+			"url": "https://marcus-second-brain.com/img/submission/screenshots/openai/s5-1920x1080.png",
+			"caption": "MCP Inspector showing a successful tool call"
+		}
+	],
+	"tools": {
+		"create_note": {
+			"annotations": {
+				"title": "Create note",
+				"readOnlyHint": false,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Creates a new markdown note in the user's private vault and returns the created file details.",
+				"open_world_justification": "Writes only to the user's private GitHub vault and does not publish public internet content.",
+				"destructive_justification": "Creates a new file and does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"update_note": {
+			"annotations": {
+				"title": "Update note",
+				"readOnlyHint": false,
+				"openWorldHint": false,
+				"destructiveHint": true
+			},
+			"justifications": {
+				"read_only_justification": "Updates an existing vault note by replacing, appending, or prepending markdown content.",
+				"open_world_justification": "Changes only the user's private GitHub vault and does not publish public internet content.",
+				"destructive_justification": "Can replace existing note content, with optional SHA checking to reduce accidental overwrite conflicts."
+			}
+		},
+		"delete_note": {
+			"annotations": {
+				"title": "Delete note",
+				"readOnlyHint": false,
+				"openWorldHint": false,
+				"destructiveHint": true
+			},
+			"justifications": {
+				"read_only_justification": "Removes a note by archiving it or permanently deleting it from the user's vault.",
+				"open_world_justification": "Changes only the user's private GitHub vault and does not publish public internet content.",
+				"destructive_justification": "Can permanently delete a selected vault note when hard delete mode is used."
+			}
+		},
+		"search_notes": {
+			"annotations": {
+				"title": "Search notes",
+				"readOnlyHint": true,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Searches markdown notes and metadata in the user's vault without changing files.",
+				"open_world_justification": "Reads from the user's private GitHub vault and does not write to external systems.",
+				"destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"get_vault_context": {
+			"annotations": {
+				"title": "Get vault context",
+				"readOnlyHint": true,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Retrieves recent topic names, folder names, and tag counts without modifying vault content.",
+				"open_world_justification": "Reads from the user's private GitHub vault and does not write to external systems.",
+				"destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"get_note": {
+			"annotations": {
+				"title": "Get note",
+				"readOnlyHint": true,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Retrieves the requested markdown note content without modifying the vault.",
+				"open_world_justification": "Reads from the user's private GitHub vault and does not write to external systems.",
+				"destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"list_structure": {
+			"annotations": {
+				"title": "List structure",
+				"readOnlyHint": true,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Lists vault folders and files without modifying any content.",
+				"open_world_justification": "Reads from the user's private GitHub vault and does not write to external systems.",
+				"destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"append_to_daily_note": {
+			"annotations": {
+				"title": "Append to daily note",
+				"readOnlyHint": false,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Adds a timestamped entry to today's daily note or creates that note if it does not exist.",
+				"open_world_justification": "Writes only to the user's private GitHub vault and does not publish public internet content.",
+				"destructive_justification": "Appends or creates note content and does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"remember": {
+			"annotations": {
+				"title": "Remember",
+				"readOnlyHint": false,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Stores a durable memory entry and links it from the daily note in the user's vault.",
+				"open_world_justification": "Writes only to the user's private GitHub vault and does not publish public internet content.",
+				"destructive_justification": "Creates memory and daily-note entries and does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"forget": {
+			"annotations": {
+				"title": "Forget",
+				"readOnlyHint": false,
+				"openWorldHint": false,
+				"destructiveHint": true
+			},
+			"justifications": {
+				"read_only_justification": "Archives a matching memory entry and writes an archive record in the user's vault.",
+				"open_world_justification": "Changes only the user's private GitHub vault and does not publish public internet content.",
+				"destructive_justification": "Hides the selected memory from future recall by marking it archived."
+			}
+		},
+		"recall": {
+			"annotations": {
+				"title": "Recall",
+				"readOnlyHint": true,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Searches active memory entries and returns matching records without modifying vault files.",
+				"open_world_justification": "Reads from the user's private GitHub vault and does not write to external systems.",
+				"destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"sync_to_claude_memory": {
+			"annotations": {
+				"title": "Sync to Claude memory",
+				"readOnlyHint": true,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Returns a compact markdown snapshot of active memories without modifying vault files.",
+				"open_world_justification": "Reads from the user's private GitHub vault and does not write to external systems.",
+				"destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"link_notes": {
+			"annotations": {
+				"title": "Link notes",
+				"readOnlyHint": false,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Updates note frontmatter to add a wikilink and may create a stub target note.",
+				"open_world_justification": "Writes only to the user's private GitHub vault and does not publish public internet content.",
+				"destructive_justification": "Adds links or a stub note and does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		},
+		"get_recent_notes": {
+			"annotations": {
+				"title": "Get recent notes",
+				"readOnlyHint": true,
+				"openWorldHint": false,
+				"destructiveHint": false
+			},
+			"justifications": {
+				"read_only_justification": "Retrieves recently changed note paths and timestamps without modifying vault content.",
+				"open_world_justification": "Reads from the user's private GitHub vault and does not write to external systems.",
+				"destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+			}
+		}
+	},
+	"test_cases": [
+		{
+			"description": "Save a new topic note with frontmatter.",
+			"user_prompt": "Save a note in my second brain about the book Atomic Habits with a short summary and the tag productivity.",
+			"file_attachment_urls": null,
+			"tools_triggered": "create_note",
+			"expected_output": "Creates a markdown note in the private vault and returns the note path and identifier.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Find saved knowledge before answering.",
+			"user_prompt": "Search my second brain for anything I saved about Cloudflare Workers deployment.",
+			"file_attachment_urls": null,
+			"tools_triggered": "search_notes",
+			"expected_output": "Returns matching vault notes with paths and metadata so ChatGPT can ground the answer in saved context.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Open a specific note after search.",
+			"user_prompt": "Open the note at 20-topics/cloudflare-workers.md from my vault.",
+			"file_attachment_urls": null,
+			"tools_triggered": "get_note",
+			"expected_output": "Returns the requested markdown note content from the user's private vault.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Append daily context.",
+			"user_prompt": "Add to today's daily note that I met Alex and we discussed the Q3 launch plan.",
+			"file_attachment_urls": null,
+			"tools_triggered": "append_to_daily_note",
+			"expected_output": "Appends the user's update to today's daily note or creates the daily note if needed.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Store and later recall a durable memory.",
+			"user_prompt": "Remember that I prefer short direct standup updates, then recall memories about standup updates.",
+			"file_attachment_urls": null,
+			"tools_triggered": "remember, recall",
+			"expected_output": "Stores the preference as an active memory and returns matching active memories for the recall query.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Update an existing note with conflict protection.",
+			"user_prompt": "Append a new section to 40-projects/website-redesign.md with the latest launch checklist.",
+			"file_attachment_urls": null,
+			"tools_triggered": "update_note",
+			"expected_output": "Updates the selected note according to the requested mode and returns the updated file details or a conflict if the SHA check fails.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Archive stale content.",
+			"user_prompt": "Forget the memory with block id id-a1b2c3 because that preference is outdated.",
+			"file_attachment_urls": null,
+			"tools_triggered": "forget",
+			"expected_output": "Marks the matching memory archived and records it in the memory archive.",
+			"expected_output_url": null
+		}
+	],
+	"negative_test_cases": [
+		{
+			"description": "Do not trigger for general web search.",
+			"user_prompt": "Search the web for today's weather in Bali.",
+			"file_attachment_urls": null,
+			"tools_triggered": null,
+			"expected_output": "The app should not be invoked because the request is unrelated to the user's private vault.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Do not trigger for unrelated calendar management.",
+			"user_prompt": "Move my 3 PM meeting to tomorrow and email the attendees.",
+			"file_attachment_urls": null,
+			"tools_triggered": null,
+			"expected_output": "The app should not be invoked because it does not manage calendars or send emails.",
+			"expected_output_url": null
+		},
+		{
+			"description": "Do not trigger for public publishing.",
+			"user_prompt": "Publish my latest project update as a public blog post.",
+			"file_attachment_urls": null,
+			"tools_triggered": null,
+			"expected_output": "The app should not be invoked because it stores private vault notes and does not publish public content.",
+			"expected_output_url": null
+		}
+	]
+}

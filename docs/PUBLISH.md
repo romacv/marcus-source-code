@@ -76,27 +76,30 @@ Current draft: visible only to the OpenAI account that owns the app; access via 
 - [ ] Address review feedback
 - [ ] Post-approval: enable for ChatGPT users, monitor logs, version bumps go through review
 
+See `docs/SUBMISSION-OPENAI.md` for the paste-ready submission guide.
+
 Docs: https://developers.openai.com/apps-sdk/deploy/submission
 
 ---
 
-## 3. Claude Plugin Marketplace
+## 3. Anthropic Connector Directory
 
-Anthropic's plugin marketplace for Claude Code / Claude.ai.
+Anthropic's MCP Connector Directory for claude.ai integrations.
 
-- [ ] Plugin packaged per spec: `.claude-plugin/marketplace.json` + plugin manifest
-- [ ] Repo public on GitHub
-- [ ] Manifest fields:
-  - [ ] `name`, `description`, `version`, `author`, `homepage`
-  - [ ] Skills / commands / agents listed with descriptions
-  - [ ] MCP server config (if bundled)
-- [ ] README with install command: `/plugin install marcus-second-brain@<owner>/<repo>`
-- [ ] Test install in clean Claude Code instance
-- [ ] Submit to Anthropic plugin directory (PR to the public marketplace registry, or via official submission form when available)
-- [ ] Listing on https://www.claude.com/ plugins page (if/when public directory exists)
-- [ ] Monitor issues + version bumps
+Form: https://clau.de/mcp-directory-submission
 
-Docs: https://docs.claude.com/en/docs/claude-code/plugins (verify current submission path — may require PR to Anthropic's marketplace repo)
+- [ ] MCP server reachable at `https://marcus-second-brain.com/mcp` (Streamable HTTP)
+- [ ] OAuth endpoints verified: authorize, token, register
+- [ ] All 14 tools documented with names and descriptions
+- [ ] Icon at 512×512 PNG and screenshots (5, 1280-wide) uploaded to public URLs
+- [ ] Demo video recorded and URL ready
+- [ ] Privacy policy and Terms of Service URLs live
+- [ ] Public help-center article or blog post live before go-live date (Anthropic requirement)
+- [ ] Submit via the form above
+- [ ] Address review feedback
+- [ ] Post-approval: monitor connector usage, keep OAuth endpoints healthy
+
+See `docs/SUBMISSION-ANTHROPIC.md` for the paste-ready submission guide.
 
 ---
 
@@ -157,8 +160,8 @@ Marcus is an MCP server — list it everywhere MCP clients discover servers.
 | Channel | Draft | Submitted | Approved | Live | Notes |
 |---|---|---|---|---|---|
 | GitHub Marketplace | ☐ | ☐ | ☐ | ☐ | edit URL on file |
-| OpenAI Apps SDK | ☑ | ☐ | ☐ | ☐ | draft created |
-| Claude Plugin Marketplace | ☐ | ☐ | ☐ | ☐ | |
+| OpenAI Apps SDK | ☑ | ☑ | ☐ | ☐ | submitted 2026-05-13; see SUBMISSION-OPENAI.md |
+| Anthropic Connector Directory | ☑ | ☑ | ☐ | ☐ | submitted 2026-05-13; awaiting review |
 | MCP servers list (PR) | ☐ | ☐ | n/a | ☐ | |
 | Smithery | ☐ | ☐ | ☐ | ☐ | |
 | mcp.so | ☐ | ☐ | ☐ | ☐ | |

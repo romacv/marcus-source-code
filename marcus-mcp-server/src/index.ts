@@ -123,7 +123,7 @@ function memoryRecordsFromFile(category: MemoryCategory, content: string): Memor
 export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, MarcusProps> {
 	server = new McpServer({
 		name: "Marcus",
-		version: "0.1.0",
+		version: "0.3.0",
 		description: "Marcus Second Brain vault tools for durable personal memory.",
 	});
 
@@ -275,7 +275,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					content: z.string().describe("Markdown body of the note (without frontmatter)"),
 					frontmatter: FrontmatterSchema.optional(),
 				},
-				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Create note", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ path, content, frontmatter }, extra) => this.run("create_note", extra, async () => {
 				const id = generateUlid();
@@ -326,7 +326,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.optional()
 						.describe("Current file SHA to prevent overwrite conflicts"),
 				},
-				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
+				annotations: { title: "Update note", readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
 			async ({ path, content, mode, expected_sha }, extra) => this.run("update_note", extra, async () => {
 				const current = await this.github.getFile(path);
@@ -370,7 +370,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.default("archive")
 						.describe("archive = move to 90-archive/, hard = permanent delete"),
 				},
-				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
+				annotations: { title: "Delete note", readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
 			async ({ path, mode }, extra) => this.run("delete_note", extra, async () => {
 				const current = await this.github.getFile(path);
@@ -414,7 +414,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					folder: z.string().optional().describe("Limit to folder prefix, e.g. '20-topics'"),
 					limit: z.number().int().min(1).max(50).default(10),
 				},
-				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Search notes", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ query, tags, folder, limit }, extra) => this.run("search_notes", extra, async () => {
 				const [codeResult, localResult] = await Promise.allSettled([
@@ -468,7 +468,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				description:
 					"Lightweight overview of what the user has notes about. Call at the start of a technical conversation to know if the vault likely covers the topic.",
 				inputSchema: {},
-				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Get vault context", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async (_args, extra) => this.run("get_vault_context", extra, async () => {
 				const commits = await this.github.getRecentCommits(60, "20-topics");
@@ -514,7 +514,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				inputSchema: {
 					path: z.string().describe("Relative vault path"),
 				},
-				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Get note", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ path }, extra) => this.run("get_note", extra, async () => {
 				const file = await this.github.getFile(path);
@@ -535,7 +535,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.optional()
 						.describe("Folder prefix to list, omit for full vault root"),
 				},
-				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "List structure", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ folder }, extra) => this.run("list_structure", extra, async () => {
 				const tree = await this.github.listTree(folder ?? "");
@@ -557,7 +557,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.optional()
 						.describe("Optional H2 section heading to group content under"),
 				},
-				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Append to daily note", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ content, heading }, extra) => this.run("append_to_daily_note", extra, async () => {
 				const today = new Date();
@@ -618,7 +618,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.optional()
 						.describe("Optional time-to-live in days; expired memories are hidden by recall"),
 				},
-				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Remember", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ content, category, date, ttl }, extra) => this.run("remember", extra, async () => {
 				const now = new Date();
@@ -683,7 +683,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				inputSchema: {
 					query: z.string().min(1).describe("Block id like id-a1b2c3 or text to forget"),
 				},
-				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
+				annotations: { title: "Forget", readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
 			async ({ query }, extra) => this.run("forget", extra, async () => {
 				const found = await this.findMemoryByQuery(query);
@@ -756,7 +756,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					category: MemoryCategorySchema.optional().describe("Optional category filter"),
 					limit: z.number().int().min(1).max(50).default(10),
 				},
-				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Recall", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ query, category, limit }, extra) => this.run("recall", extra, async () => {
 				const normalizedQuery = normalizeBlockId(query).toLowerCase();
@@ -802,7 +802,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				description:
 					"Return a compact markdown snapshot of active Second Brain memories for syncing saved personal context into Claude memory.",
 				inputSchema: {},
-				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Sync to Claude memory", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async (_args, extra) => this.run("sync_to_claude_memory", extra, async () => {
 				const now = new Date();
@@ -845,7 +845,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.default(true)
 						.describe("Create a stub note if target doesn't exist"),
 				},
-				annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Link notes", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ source_path, target_path, create_stub }, extra) => this.run("link_notes", extra, async () => {
 				// Ensure target exists
@@ -915,7 +915,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					limit: z.number().int().min(1).max(50).default(10),
 					folder: z.string().optional().describe("Limit to folder prefix"),
 				},
-				annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Get recent notes", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ limit, folder }, extra) => this.run("get_recent_notes", extra, async () => {
 				const commits = await this.github.getRecentCommits(limit * 3, folder);

@@ -1,0 +1,153 @@
+{
+	"schema_version": 1,
+	"connector": {
+		"name": "Marcus - Auto Second Brain",
+		"slug": "marcus-second-brain",
+		"tagline": "Your AI-powered private memory vault backed by GitHub",
+		"description": "Marcus saves, searches, and recalls your personal notes and memories from a private GitHub repository. Use it to build a searchable second brain: capture meeting notes, save how-to guides, store durable preferences, and ask Claude to retrieve them before answering your questions. All data stays in your own GitHub repo \u2014 you own it.",
+		"server_url": "https://marcus-second-brain.com/mcp",
+		"transport": "streamable-http",
+		"oauth": {
+			"authorization_endpoint": "https://marcus-second-brain.com/authorize",
+			"token_endpoint": "https://marcus-second-brain.com/token",
+			"registration_endpoint": "https://marcus-second-brain.com/register",
+			"pkce_required": true,
+			"scopes": [
+				"repo"
+			],
+			"redirect_uris_supported": [
+				"https://claude.ai/api/mcp/auth_callback",
+				"https://claude.com/api/mcp/auth_callback"
+			]
+		},
+		"tested_surfaces": [
+			"claude.ai",
+			"claude-desktop"
+		],
+		"icon_url": "https://marcus-second-brain.com/img/submission/icon-512.png",
+		"screenshots": [
+			"https://marcus-second-brain.com/img/submission/screenshots/anthropic/s1-1280w.png",
+			"https://marcus-second-brain.com/img/submission/screenshots/anthropic/s2-1280w.png",
+			"https://marcus-second-brain.com/img/submission/screenshots/anthropic/s3-1280w.png",
+			"https://marcus-second-brain.com/img/submission/screenshots/anthropic/s4-1280w.png",
+			"https://marcus-second-brain.com/img/submission/screenshots/anthropic/s5-1280w.png"
+		],
+		"support_email": "r@resrom.com",
+		"privacy_url": "https://marcus-second-brain.com/privacy",
+		"terms_url": "https://marcus-second-brain.com/terms",
+		"developer": {
+			"name": "Roman Resenchuk",
+			"email": "r@resrom.com"
+		},
+		"version": "0.3.0",
+		"launch_date": "2026-05-13",
+		"demo_video_url": null,
+		"use_cases": [
+			"Capture meeting notes or daily journal entries while chatting with Claude",
+			"Search saved how-to guides and decisions before answering technical questions",
+			"Store durable personal preferences so Claude remembers them across sessions",
+			"Link related notes to build a connected knowledge graph",
+			"Recall active memories by topic or category without manual search"
+		],
+		"tools": [
+			{
+				"name": "create_note",
+				"title": "Create note",
+				"readOnlyHint": false,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "update_note",
+				"title": "Update note",
+				"readOnlyHint": false,
+				"destructiveHint": true,
+				"openWorldHint": false
+			},
+			{
+				"name": "delete_note",
+				"title": "Delete note",
+				"readOnlyHint": false,
+				"destructiveHint": true,
+				"openWorldHint": false
+			},
+			{
+				"name": "search_notes",
+				"title": "Search notes",
+				"readOnlyHint": true,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "get_vault_context",
+				"title": "Get vault context",
+				"readOnlyHint": true,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "get_note",
+				"title": "Get note",
+				"readOnlyHint": true,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "list_structure",
+				"title": "List structure",
+				"readOnlyHint": true,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "append_to_daily_note",
+				"title": "Append to daily note",
+				"readOnlyHint": false,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "remember",
+				"title": "Remember",
+				"readOnlyHint": false,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "forget",
+				"title": "Forget",
+				"readOnlyHint": false,
+				"destructiveHint": true,
+				"openWorldHint": false
+			},
+			{
+				"name": "recall",
+				"title": "Recall",
+				"readOnlyHint": true,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "sync_to_claude_memory",
+				"title": "Sync to Claude memory",
+				"readOnlyHint": true,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "link_notes",
+				"title": "Link notes",
+				"readOnlyHint": false,
+				"destructiveHint": false,
+				"openWorldHint": false
+			},
+			{
+				"name": "get_recent_notes",
+				"title": "Get recent notes",
+				"readOnlyHint": true,
+				"destructiveHint": false,
+				"openWorldHint": false
+			}
+		]
+	}
+}

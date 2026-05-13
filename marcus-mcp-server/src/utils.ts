@@ -12,6 +12,9 @@ export const layout = (content: HtmlEscapedString | string, title: string) => ht
 			<meta charset="UTF-8" />
 			<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 			<title>${title}</title>
+			<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+			<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+			<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png" />
 			<link rel="preconnect" href="https://fonts.googleapis.com" />
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 			<link
@@ -1387,5 +1390,106 @@ export const termsContent = async (): Promise<HtmlEscapedString> => html`
 
 		<h2>Contact</h2>
 		<p>Marcus Second Brain · <a href="mailto:r@resrom.com">r@resrom.com</a> · Effective 2026-05-11</p>
+	</div>
+`;
+
+export const docsContent = async (): Promise<HtmlEscapedString> => html`
+	<div class="legal-page">
+		<p class="section__eyebrow">Documentation</p>
+		<h1>Marcus — Developer &amp; User Reference</h1>
+		<p class="legal-lead">Everything you need to set up, use, and troubleshoot Marcus Second Brain.</p>
+
+		<h2>Setup</h2>
+		<ol>
+			<li>
+				<strong>Add the connector.</strong>
+				In Claude.ai open <em>Settings → Connectors → Add connector</em> and enter
+				<code>https://marcus-second-brain.com/mcp</code>.
+				In ChatGPT open <em>Explore GPTs → Connect app</em> and search for Marcus.
+			</li>
+			<li>
+				<strong>Sign in with GitHub.</strong>
+				Marcus redirects through GitHub OAuth, then asks you to install the Marcus GitHub App on a
+				single repository named <code>marcus-second-brain-vault</code>.
+				Marcus requests <em>Contents: Read &amp; Write</em> on that repository only — no access to any
+				other repository or organisation.
+			</li>
+			<li>
+				<strong>Start using Marcus.</strong>
+				Ask your AI client: <em>"Save this to my second brain"</em>, <em>"Search my vault for [topic]"</em>,
+				or <em>"What do I remember about [topic]?"</em> — Marcus tools are invoked automatically.
+			</li>
+		</ol>
+
+		<h2>Tool reference</h2>
+		<p>Marcus exposes 14 tools over MCP. All tools operate exclusively on the authenticated user's private GitHub vault repository.</p>
+		<div class="prose">
+			<table>
+				<thead><tr><th>Tool</th><th>What it does</th><th>Writes?</th></tr></thead>
+				<tbody>
+					<tr><td><code>create_note</code></td><td>Save a new markdown note with YAML frontmatter to the vault.</td><td>Yes</td></tr>
+					<tr><td><code>update_note</code></td><td>Replace, append to, or prepend content in an existing vault note.</td><td>Yes</td></tr>
+					<tr><td><code>delete_note</code></td><td>Archive (safe) or permanently delete a vault note.</td><td>Yes</td></tr>
+					<tr><td><code>search_notes</code></td><td>Full-text and tag search across all vault notes.</td><td>No</td></tr>
+					<tr><td><code>get_note</code></td><td>Read a specific vault note by path.</td><td>No</td></tr>
+					<tr><td><code>get_vault_context</code></td><td>Return a lightweight summary of recent topics and tag counts.</td><td>No</td></tr>
+					<tr><td><code>list_structure</code></td><td>List vault folders and files.</td><td>No</td></tr>
+					<tr><td><code>get_recent_notes</code></td><td>Return recently updated note paths and timestamps.</td><td>No</td></tr>
+					<tr><td><code>append_to_daily_note</code></td><td>Append a timestamped entry to today's daily note, creating it if absent.</td><td>Yes</td></tr>
+					<tr><td><code>remember</code></td><td>Store a durable memory entry linked from today's daily note.</td><td>Yes</td></tr>
+					<tr><td><code>recall</code></td><td>Search active memories by text or block ID.</td><td>No</td></tr>
+					<tr><td><code>forget</code></td><td>Archive a memory entry so it no longer appears in recall.</td><td>Yes</td></tr>
+					<tr><td><code>sync_to_claude_memory</code></td><td>Return a compact snapshot of active memories for syncing into Claude memory.</td><td>No</td></tr>
+					<tr><td><code>link_notes</code></td><td>Add a wikilink between two notes, creating a stub target if it does not exist.</td><td>Yes</td></tr>
+				</tbody>
+			</table>
+		</div>
+
+		<h2>Troubleshooting</h2>
+
+		<h3>I see no Marcus tools in my AI client</h3>
+		<p>
+			The connector may not be active. In Claude.ai go to <em>Settings → Connectors</em> and confirm Marcus is
+			listed and toggled on. In ChatGPT open the conversation settings and confirm the Marcus app is enabled.
+			If the connector is listed but shows an error, disconnect and reconnect — this re-runs the OAuth flow
+			and refreshes the installation token.
+		</p>
+
+		<h3>I am stuck in an OAuth loop</h3>
+		<p>
+			This usually means the GitHub App installation step was skipped. After GitHub OAuth completes, Marcus
+			redirects to a GitHub App installation page — you must click <em>Install &amp; Authorize</em> and
+			select <em>Only select repositories → marcus-second-brain-vault</em>. If you landed back at the
+			connector screen without completing that step, disconnect, reconnect, and follow all four clicks on the
+			GitHub installation page.
+		</p>
+
+		<h3>Rate limit hit — tools return a rate-limit error</h3>
+		<p>
+			Marcus enforces a limit of 30 tool calls per user per UTC day on the free tier. The limit resets at
+			midnight UTC. If you regularly hit the limit, consider batching writes — for example, one
+			<code>create_note</code> call that includes all content for a session rather than many smaller calls.
+		</p>
+
+		<h3>How to revoke access or uninstall the GitHub App</h3>
+		<ol>
+			<li>
+				Go to <a href="https://github.com/settings/installations" rel="noopener">github.com/settings/installations</a>,
+				find <strong>marcus-mcp-server</strong>, click <em>Configure</em>, then <em>Uninstall</em>.
+				This immediately revokes Marcus's write access to your vault repository.
+			</li>
+			<li>
+				To also revoke the OAuth token, go to
+				<a href="https://github.com/settings/applications" rel="noopener">github.com/settings/applications</a>
+				→ <em>Authorized OAuth Apps</em>, find Marcus, and click <em>Revoke</em>.
+			</li>
+			<li>
+				Your <code>marcus-second-brain-vault</code> repository and all its contents remain in your GitHub
+				account. Marcus never deletes user data on uninstall.
+			</li>
+		</ol>
+
+		<h2>Support</h2>
+		<p>Email <a href="mailto:r@resrom.com">r@resrom.com</a> with your GitHub username and a description of the issue.</p>
 	</div>
 `;

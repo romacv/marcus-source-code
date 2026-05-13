@@ -57,6 +57,5 @@ export async function checkAndIncrement(deps: RateLimitDeps): Promise<void> {
 
 /** Stub for future tier lookup. Today: everyone is free. */
 export function resolveTier(_userId: string): Tier {
-	// TODO: replace with real D1/KV tier lookup once Stripe is wired.
 	return "free";
 }
