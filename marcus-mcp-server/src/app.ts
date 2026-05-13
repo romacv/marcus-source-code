@@ -44,8 +44,10 @@ app.use("*", async (c, next) => {
 	await next();
 });
 
+const CSP_PATHS_RE = /^\/(authorize|register|auth\/|vault\/)/;
 app.use("*", async (c, next) => {
 	await next();
+	if (!CSP_PATHS_RE.test(new URL(c.req.url).pathname)) return;
 	if (c.res.headers.get("content-type")?.includes("text/html")) {
 		c.header("Content-Security-Policy",
 			"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'none'; frame-ancestors 'none'");
