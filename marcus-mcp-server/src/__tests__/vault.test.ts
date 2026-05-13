@@ -2,7 +2,53 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { provisionVault, vaultRepoState } from "../github-oauth.ts";
 import { findUnrelatedVaultEntries } from "../vault-guard.ts";
-import { buildFrontmatter, extractAutoTags, parseFrontmatter } from "../vault.ts";
+import { assertVaultPath, buildFrontmatter, extractAutoTags, parseFrontmatter } from "../vault.ts";
+
+// --- assertVaultPath ---
+
+test("assertVaultPath: allows valid memory path", () => {
+	assert.doesNotThrow(() => assertVaultPath("15-memory/personal.md"));
+});
+
+test("assertVaultPath: allows README.md", () => {
+	assert.doesNotThrow(() => assertVaultPath("README.md"));
+});
+
+test("assertVaultPath: allows index.md", () => {
+	assert.doesNotThrow(() => assertVaultPath("index.md"));
+});
+
+test("assertVaultPath: allows nested daily path", () => {
+	assert.doesNotThrow(() => assertVaultPath("00-daily/2026/05/2026-05-13.md"));
+});
+
+test("assertVaultPath: rejects parent traversal (..)", () => {
+	assert.throws(() => assertVaultPath("15-memory/../../etc/passwd"), /parent segment forbidden/);
+});
+
+test("assertVaultPath: rejects encoded parent traversal via normalized path", () => {
+	assert.throws(() => assertVaultPath("15-memory/sub/../../escape.md"), /parent segment forbidden/);
+});
+
+test("assertVaultPath: rejects absolute path", () => {
+	assert.throws(() => assertVaultPath("/etc/passwd"), /absolute path forbidden/);
+});
+
+test("assertVaultPath: rejects .github/workflows path", () => {
+	assert.throws(() => assertVaultPath(".github/workflows/x.yml"));
+});
+
+test("assertVaultPath: rejects _marcus/ internal path", () => {
+	assert.throws(() => assertVaultPath("_marcus/anything"));
+});
+
+test("assertVaultPath: rejects non-.md extension under allowed prefix", () => {
+	assert.throws(() => assertVaultPath("20-topics/note.yml"), /must end with .md/);
+});
+
+test("assertVaultPath: allows .gitkeep under allowed prefix", () => {
+	assert.doesNotThrow(() => assertVaultPath("60-photos/.gitkeep"));
+});
 
 test("extractAutoTags returns existing tags unchanged", () => {
 	assert.deepEqual(extractAutoTags("SwiftUI Xcode", { tags: ["manual"] }), ["manual"]);

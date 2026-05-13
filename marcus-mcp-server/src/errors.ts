@@ -6,9 +6,11 @@ export type ErrorCode =
 	| "conflict"
 	| "upstream_unavailable"
 	| "invalid_input"
+	| "invalid_argument"
+	| "ambiguous"
 	| "internal";
 
-export type ErrorRecovery = "reauth" | "retry" | "wait" | "contact_support";
+export type ErrorRecovery = "reauth" | "retry" | "wait" | "contact_support" | "fix_input";
 
 export type ErrorExtras = {
 	reauth_url?: string;
@@ -16,6 +18,7 @@ export type ErrorExtras = {
 	request_id?: string;
 	current_sha?: string;
 	path?: string;
+	candidates?: unknown;
 };
 
 export class StructuredToolError extends Error {
@@ -55,9 +58,21 @@ function retryAfterMs(headers: Headers): number | undefined {
 	return Math.max(0, resetSeconds * 1000 - Date.now());
 }
 
+function safeGitHubMessage(body: string, status: number): string {
+	try {
+		const parsed = JSON.parse(body) as { message?: unknown; documentation_url?: unknown };
+		if (typeof parsed.message === "string") {
+			return parsed.message.slice(0, 200);
+		}
+	} catch {
+		// not JSON
+	}
+	return `GitHub request failed with ${status}`;
+}
+
 export function mapGitHubError(status: number, headers: Headers, body: string): StructuredToolError {
 	const retryMs = retryAfterMs(headers);
-	const message = body.slice(0, 500) || `GitHub request failed with ${status}`;
+	const message = safeGitHubMessage(body, status);
 
 	if (status === 401) {
 		return new StructuredToolError("auth_required", message, "reauth");

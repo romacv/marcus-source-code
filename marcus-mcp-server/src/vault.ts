@@ -1,5 +1,33 @@
 export const VAULT_REPO_NAME = "marcus-second-brain-vault";
 
+const ALLOWED_PREFIXES = [
+	"00-daily/",
+	"10-journal/",
+	"15-memory/",
+	"20-topics/",
+	"30-people/",
+	"40-projects/",
+	"50-resources/",
+	"60-photos/",
+	"90-archive/",
+] as const;
+
+const ALLOWED_FILES = new Set(["README.md", "index.md"]);
+
+export function assertVaultPath(path: string): void {
+	if (!path || typeof path !== "string") throw new Error("invalid path");
+	if (path.startsWith("/")) throw new Error("absolute path forbidden");
+	if (path.includes("..")) throw new Error("parent segment forbidden");
+	if (path.includes("\\") || path.includes("\0")) throw new Error("invalid char");
+	if (ALLOWED_FILES.has(path)) return;
+	if (!ALLOWED_PREFIXES.some((p) => path.startsWith(p))) {
+		throw new Error(`path must be under ${ALLOWED_PREFIXES.join(", ")}`);
+	}
+	if (!path.endsWith(".md") && !path.includes("/.gitkeep")) {
+		throw new Error("vault file must end with .md");
+	}
+}
+
 export const MEMORY_CATEGORIES = [
 	"hardware",
 	"finance",
@@ -289,5 +317,6 @@ export function memoryArchivePath(): string {
 
 // Moves a vault path into the 90-archive/ folder.
 export function archivePath(path: string): string {
-	return `90-archive/${path}`;
+	const safe = path.split("/").filter((s) => s && s !== ".." && s !== ".").join("/");
+	return `90-archive/${safe}`;
 }

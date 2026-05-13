@@ -17,6 +17,7 @@ import {
 } from "./memory";
 import {
 	archivePath,
+	assertVaultPath,
 	buildFrontmatter,
 	dailyNotePath,
 	extractAutoTags,
@@ -98,6 +99,14 @@ function excerpt(content: string, max = 60): string {
 
 function obsidianAlias(value: string): string {
 	return value.replace(/[\]|]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function checkVaultPath(path: string): void {
+	try {
+		assertVaultPath(path);
+	} catch (err) {
+		throw new StructuredToolError("invalid_argument", err instanceof Error ? err.message : String(err), "fix_input");
+	}
 }
 
 function categoryFromPath(path: string): MemoryCategory | null {
@@ -275,9 +284,10 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					content: z.string().describe("Markdown body of the note (without frontmatter)"),
 					frontmatter: FrontmatterSchema.optional(),
 				},
-				annotations: { title: "Create note", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+				annotations: { title: "Create note", readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
 			async ({ path, content, frontmatter }, extra) => this.run("create_note", extra, async () => {
+				checkVaultPath(path);
 				const id = generateUlid();
 				const now = new Date().toISOString();
 				const autoTags = extractAutoTags(content, frontmatter ?? {});
@@ -329,6 +339,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				annotations: { title: "Update note", readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
 			async ({ path, content, mode, expected_sha }, extra) => this.run("update_note", extra, async () => {
+				checkVaultPath(path);
 				const current = await this.github.getFile(path);
 				if (expected_sha && current.sha !== expected_sha) {
 					throw new StructuredToolError("conflict", "SHA mismatch", "retry", {
@@ -369,10 +380,20 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.enum(["archive", "hard"])
 						.default("archive")
 						.describe("archive = move to 90-archive/, hard = permanent delete"),
+					confirm_hard_delete: z.boolean().optional()
+						.describe("Required when mode='hard'. Must be explicitly true."),
 				},
 				annotations: { title: "Delete note", readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
-			async ({ path, mode }, extra) => this.run("delete_note", extra, async () => {
+			async ({ path, mode, confirm_hard_delete }, extra) => this.run("delete_note", extra, async () => {
+				checkVaultPath(path);
+				if (mode === "hard" && confirm_hard_delete !== true) {
+					throw new StructuredToolError(
+						"invalid_argument",
+						"hard delete requires confirm_hard_delete: true",
+						"fix_input",
+					);
+				}
 				const current = await this.github.getFile(path);
 				if (mode === "archive") {
 					const dest = archivePath(path);
@@ -517,6 +538,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				annotations: { title: "Get note", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ path }, extra) => this.run("get_note", extra, async () => {
+				checkVaultPath(path);
 				const file = await this.github.getFile(path);
 				return {
 					content: [{ type: "text" as const, text: file.content }],
@@ -538,6 +560,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				annotations: { title: "List structure", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ folder }, extra) => this.run("list_structure", extra, async () => {
+				if (folder) checkVaultPath(`${folder}/.gitkeep`);
 				const tree = await this.github.listTree(folder ?? "");
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify(tree) }],
@@ -848,6 +871,8 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				annotations: { title: "Link notes", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
 			},
 			async ({ source_path, target_path, create_stub }, extra) => this.run("link_notes", extra, async () => {
+				checkVaultPath(source_path);
+				checkVaultPath(target_path);
 				// Ensure target exists
 				let targetCreated = false;
 				try {
