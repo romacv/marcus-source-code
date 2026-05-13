@@ -1,6 +1,9 @@
 /**
  * For more details on how to configure Wrangler, refer to:
  * https://developers.cloudflare.com/workers/wrangler/configuration/
+ *
+ * Deployment: pushes to `main` auto-deploy via .github/workflows/ci.yml
+ * using the CLOUDFLARE_API_TOKEN repo secret.
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
