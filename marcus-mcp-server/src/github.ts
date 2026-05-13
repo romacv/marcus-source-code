@@ -6,6 +6,12 @@ import { parseFrontmatter } from "./vault.ts";
 
 const GITHUB_API = "https://api.github.com";
 
+// Encode each path segment individually; preserves "/" separators in URLs.
+const encPath = (p: string) => p.split("/").map(encodeURIComponent).join("/");
+
+// Strip user-supplied qualifier keywords to prevent search injection.
+const QUALIFIER_RE = /\b(repo|org|user|in|path|extension|filename):\S+/gi;
+
 type FileResult = {
 	sha: string;
 	content: string;
@@ -168,7 +174,7 @@ export class GitHubClient {
 
 	async branchExists(branch: string): Promise<boolean> {
 		try {
-			await this.api(`/repos/${this.owner}/${this.repo}/git/ref/heads/${branch}`);
+			await this.api(`/repos/${this.owner}/${this.repo}/git/ref/heads/${encPath(branch)}`);
 			return true;
 		} catch (e) {
 			if (e instanceof StructuredToolError && (e.code === "not_found" || e.code === "conflict")) {
@@ -179,7 +185,7 @@ export class GitHubClient {
 	}
 
 	async getFile(path: string): Promise<FileResult> {
-		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`);
+		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${encPath(path)}`);
 		const data = (await res.json()) as { sha: string; content: string; encoding: string };
 		const binary = atob(data.content.replace(/\n/g, ""));
 		const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
@@ -188,7 +194,7 @@ export class GitHubClient {
 	}
 
 	async createFile(path: string, content: string, message?: string): Promise<WriteResult> {
-		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
+		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${encPath(path)}`, {
 			method: "PUT",
 			body: JSON.stringify({
 				message: message ?? `marcus-mcp-server: create ${path}`,
@@ -200,7 +206,7 @@ export class GitHubClient {
 	}
 
 	async updateFile(path: string, content: string, sha: string, message?: string): Promise<WriteResult> {
-		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
+		const res = await this.api(`/repos/${this.owner}/${this.repo}/contents/${encPath(path)}`, {
 			method: "PUT",
 			body: JSON.stringify({
 				message: message ?? `marcus-mcp-server: update ${path}`,
@@ -213,7 +219,7 @@ export class GitHubClient {
 	}
 
 	async deleteFile(path: string, sha: string, message?: string): Promise<void> {
-		await this.api(`/repos/${this.owner}/${this.repo}/contents/${path}`, {
+		await this.api(`/repos/${this.owner}/${this.repo}/contents/${encPath(path)}`, {
 			method: "DELETE",
 			body: JSON.stringify({
 				message: message ?? `marcus-mcp-server: delete ${path}`,
@@ -226,8 +232,9 @@ export class GitHubClient {
 		query: string,
 		opts: { folder?: string; limit?: number } = {},
 	): Promise<SearchMatch[]> {
+		const safeQuery = query.replace(QUALIFIER_RE, " ").trim();
 		const qualifier = `repo:${this.owner}/${this.repo}${opts.folder ? ` path:${opts.folder}` : ""}`;
-		const q = encodeURIComponent(`${query} ${qualifier} extension:md`);
+		const q = encodeURIComponent(`${qualifier} ${safeQuery} extension:md`);
 		const res = await this.api(
 			`/search/code?q=${q}&per_page=${opts.limit ?? 10}`,
 			{ headers: { Accept: "application/vnd.github.text-match+json" } },
@@ -237,9 +244,9 @@ export class GitHubClient {
 	}
 
 	async listTree(folder: string): Promise<TreeEntry[]> {
-		const path = folder ? `${folder}?recursive=1` : "HEAD?recursive=1";
+		const treePath = folder ? `${encPath(folder)}?recursive=1` : "HEAD?recursive=1";
 		const res = await this.api(
-			`/repos/${this.owner}/${this.repo}/git/trees/${path}`,
+			`/repos/${this.owner}/${this.repo}/git/trees/${treePath}`,
 		);
 		const data = (await res.json()) as {
 			tree: Array<{ path: string; type: "blob" | "tree" }>;
@@ -350,7 +357,7 @@ export class GitHubClient {
 		// Fetch files for each commit (needed to filter by path)
 		return Promise.all(
 			commits.map(async (c) => {
-				const detail = await this.api(`/repos/${this.owner}/${this.repo}/commits/${c.sha}`);
+				const detail = await this.api(`/repos/${this.owner}/${this.repo}/commits/${encodeURIComponent(c.sha)}`);
 				return detail.json() as Promise<Commit>;
 			}),
 		);
