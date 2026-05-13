@@ -1,3 +1,8 @@
+# PM office and workflow scratch dirs
+.agents-office/
+.pm-loop/
+plans/
+
 ### macOS
 # Finder metadata
 .DS_Store
@@ -6,7 +11,7 @@
 ._*
 
 # Custom folder icons
-Icon
+Icon
 
 # Volume root files
 .DocumentRevisions-V100
