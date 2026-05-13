@@ -1,6 +1,7 @@
 import { createPrivateKey, createSign } from "node:crypto";
 import { mapGitHubError, StructuredToolError } from "./errors.ts";
 import { getCachedInstallationToken, setCachedInstallationToken } from "./github-token-cache.ts";
+import { anonId } from "./audit.ts";
 import { parseFrontmatter } from "./vault.ts";
 
 const GITHUB_API = "https://api.github.com";
@@ -120,7 +121,8 @@ export class GitHubClient {
 			GITHUB_APP_CLIENT_ID: this.clientId,
 			GITHUB_APP_PRIVATE_KEY: this.privateKeyPem,
 		});
-		console.log("[app-jwt]", { iss_prefix: this.clientId.slice(0, 6), installationId: this.installationId, exp_in_s: 600 });
+		const anonInstallId = await anonId(this.installationId, this.encryptionKey);
+		console.log("[app-jwt]", JSON.stringify({ installationId: anonInstallId, exp_in_s: 600 }));
 		const res = await fetch(
 			`${GITHUB_API}/app/installations/${this.installationId}/access_tokens`,
 			{

@@ -36,7 +36,7 @@ export async function exchangeCodeForUserToken(code: string, env: OAuthEnv): Pro
 		}),
 	});
 	const data = (await res.json()) as { access_token?: string; token_type?: string; scope?: string; error?: string; error_description?: string };
-	console.log("[token-exchange]", JSON.stringify({ status: res.status, token_prefix: data.access_token?.slice(0, 8), token_type: data.token_type, scope: data.scope, error: data.error, error_description: data.error_description }));
+	console.log("[token-exchange]", JSON.stringify({ status: res.status, error: data.error, error_description: data.error_description }));
 	if (!data.access_token) throw new Error(`GitHub token exchange failed: ${data.error} — ${data.error_description}`);
 	return data.access_token;
 }
@@ -81,7 +81,8 @@ export async function findInstallationByLogin(
 		return null;
 	}
 	const data = (await res.json()) as { id: number };
-	console.log("[find-install-by-login]", JSON.stringify({ uid, result: "found", id: data.id }));
+	const anonInstallId = await anonId(String(data.id), secretKey);
+	console.log("[find-install-by-login]", JSON.stringify({ uid, result: "found", id: anonInstallId }));
 	return String(data.id);
 }
 
@@ -109,7 +110,6 @@ export async function findInstallationForApp(
 	console.log("[find-install-for-app]", JSON.stringify({
 		expectedAppId: appId,
 		listedCount: data.installations.length,
-		listedAppIds: data.installations.map((i) => i.app_id),
 		matched: !!found,
 	}));
 	return found ? String(found.id) : null;

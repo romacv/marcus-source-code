@@ -193,7 +193,10 @@ app.get("/auth/github/callback", async (c) => {
 		await provisionVault(userToken, user.login, c.env.KV_ENCRYPTION_KEY);
 		return c.redirect(installPagePath);
 	} catch (error) {
-		console.warn("[provision-vault]", String(error).slice(0, 300));
+		console.warn("[provision-vault]", JSON.stringify({
+			code: error instanceof StructuredToolError ? error.code : "unknown",
+			status: typeof error === "object" && error !== null && "status" in error ? (error as { status: unknown }).status : undefined,
+		}));
 		return c.redirect("/vault/error");
 	}
 });
