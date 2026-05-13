@@ -1,3 +1,4 @@
+import { anonId } from "./audit.ts";
 import { StructuredToolError } from "./errors.ts";
 
 export const FREE_DAILY_CAP = 30;
@@ -10,6 +11,7 @@ export type RateLimitDeps = {
 	kv: KVNamespace;
 	userId: string;
 	tier: Tier;
+	encryptionKey: string;
 	/** Override for tests — defaults to current UTC date */
 	now?: () => Date;
 };
@@ -34,7 +36,8 @@ export async function checkAndIncrement(deps: RateLimitDeps): Promise<void> {
 
 	const now = (deps.now ?? (() => new Date()))();
 	const dateKey = utcDateKey(now);
-	const key = `${KV_KEY_PREFIX}:${deps.userId}:${dateKey}`;
+	const uid = await anonId(deps.userId, deps.encryptionKey);
+	const key = `${KV_KEY_PREFIX}:${uid}:${dateKey}`;
 
 	const raw = await deps.kv.get(key);
 	const current = raw ? Number(raw) || 0 : 0;

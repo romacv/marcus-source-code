@@ -187,6 +187,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					kv: this.env.RATE_LIMIT_KV,
 					userId: this.props.userId,
 					tier: resolveTier(this.props.userId),
+					encryptionKey: this.env.KV_ENCRYPTION_KEY,
 				});
 			}
 			return await fn();
@@ -240,9 +241,9 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 		);
 	}
 
-	private async findMemoryByQuery(
+	private async findMemoryCandidates(
 		query: string,
-	): Promise<{ category: MemoryCategory; file: GitHubFile; line: string; parsed: ParsedMemoryLine } | null> {
+	): Promise<Array<{ category: MemoryCategory; file: GitHubFile; line: string; parsed: ParsedMemoryLine }>> {
 		const normalizedQuery = normalizeBlockId(query).toLowerCase();
 		let categories: MemoryCategory[] = [...MEMORY_CATEGORIES];
 
@@ -254,6 +255,8 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 			if (resultCategories.length > 0) categories = [...new Set(resultCategories)];
 		}
 
+		const candidates: Array<{ category: MemoryCategory; file: GitHubFile; line: string; parsed: ParsedMemoryLine }> = [];
+
 		for (const category of categories) {
 			const file = await this.getMemoryFile(category);
 			if (!file) continue;
@@ -262,11 +265,14 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				if (!parsed || parsed.archived) continue;
 				const matchesId = parsed.blockId.toLowerCase() === normalizedQuery;
 				const matchesText = parsed.content.toLowerCase().includes(query.toLowerCase());
-				if (matchesId || matchesText) return { category, file, line, parsed };
+				if (matchesId || matchesText) {
+					candidates.push({ category, file, line, parsed });
+					if (BLOCK_ID_QUERY_RE.test(query)) return candidates; // exact ID match — stop
+				}
 			}
 		}
 
-		return null;
+		return candidates;
 	}
 
 	async init() {
@@ -709,10 +715,25 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				annotations: { title: "Forget", readOnlyHint: false, openWorldHint: false, destructiveHint: true },
 			},
 			async ({ query }, extra) => this.run("forget", extra, async () => {
-				const found = await this.findMemoryByQuery(query);
-				if (!found) {
+				const candidates = await this.findMemoryCandidates(query);
+				if (candidates.length === 0) {
 					throw new StructuredToolError("not_found", "Memory not found", "contact_support");
 				}
+				if (candidates.length > 1) {
+					throw new StructuredToolError(
+						"ambiguous",
+						"Multiple memories match — specify block_id",
+						"fix_input",
+						{
+							candidates: candidates.slice(0, 5).map((c) => ({
+								block_id: c.parsed.blockId,
+								category: c.category,
+								excerpt: c.parsed.content.slice(0, 80),
+							})),
+						},
+					);
+				}
+				const found = candidates[0]!;
 
 				const archivedDate = todayIsoDate();
 				const archiveLine = `- [${archivedDate} archived] [[${found.category}#^${found.parsed.blockId}]] - ${found.parsed.content}`;

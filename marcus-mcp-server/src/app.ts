@@ -24,6 +24,26 @@ export type Bindings = MarcusEnv & {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+// Per-IP rate limit for unauthenticated OAuth endpoints (in-memory, per Worker isolate).
+// A proper fix requires Cloudflare Rate Limiting Rules; this provides the first layer.
+const ipBuckets = new Map<string, { count: number; resetAt: number }>();
+const IP_RATE_LIMIT_PATHS = new Set(["/authorize", "/auth/github/callback", "/register"]);
+app.use("*", async (c, next) => {
+	if (!IP_RATE_LIMIT_PATHS.has(new URL(c.req.url).pathname)) {
+		await next();
+		return;
+	}
+	const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
+	const now = Date.now();
+	const bucket = ipBuckets.get(ip);
+	if (!bucket || bucket.resetAt < now) {
+		ipBuckets.set(ip, { count: 1, resetAt: now + 60_000 });
+	} else if (++bucket.count > 30) {
+		return c.text("Rate limit exceeded", 429);
+	}
+	await next();
+});
+
 app.use("*", async (c, next) => {
 	await next();
 	if (c.res.headers.get("content-type")?.includes("text/html")) {
