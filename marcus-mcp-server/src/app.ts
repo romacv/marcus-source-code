@@ -1,6 +1,6 @@
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
-import { html, raw } from "hono/html";
+import { html } from "hono/html";
 import { anonId } from "./audit.ts";
 import { StructuredToolError } from "./errors.ts";
 import type { MarcusEnv } from "./index";
@@ -23,6 +23,16 @@ export type Bindings = MarcusEnv & {
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+app.use("*", async (c, next) => {
+	await next();
+	if (c.res.headers.get("content-type")?.includes("text/html")) {
+		c.header("Content-Security-Policy",
+			"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'none'; frame-ancestors 'none'");
+		c.header("X-Content-Type-Options", "nosniff");
+		c.header("Referrer-Policy", "no-referrer");
+	}
+});
 
 app.get("/", async (c) => {
 	const content = await homeContent(c.req.raw);
@@ -201,11 +211,14 @@ app.get("/auth/github/callback", async (c) => {
 	}
 });
 
+const STATE_FORMAT_RE = /^[A-Za-z0-9+/=._-]+$/;
+
 // Intermediate page shown between vault provisioning and GitHub's install screen.
 // Previews the 4 clicks the user must perform on GitHub's hosted install page.
 app.get("/vault/install", async (c) => {
 	const state = c.req.query("state") ?? "";
 	const login = c.req.query("login") ?? "";
+	if (state && !STATE_FORMAT_RE.test(state)) return c.text("Invalid state format", 400);
 	const installUrl = `https://github.com/apps/${c.env.GITHUB_APP_SLUG}/installations/new?state=${encodeURIComponent(state)}`;
 
 	const content = html`
@@ -243,42 +256,40 @@ app.get("/vault/setup", (c) => {
 	return c.redirect(`/vault/install${qs}`, 302);
 });
 
-app.get("/vault/error", (c) => {
-	const reconnectUrl = "/authorize";
-	const content = raw(
-		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
+app.get("/vault/error", async (c) => {
+	const content = html`
+		<div style="max-width:560px;margin:0 auto;padding:2rem 0">
 			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:400;letter-spacing:-.025em;text-transform:uppercase;margin-bottom:1rem">Vault setup failed</h1>
 			<div class="alert">
 				<div class="alert__title">Could not create repository</div>
 				<p class="alert__body">Marcus could not create your private vault repository. Please try again. If it keeps failing, check that your GitHub account has permission to create repositories.</p>
 			</div>
 			<div class="cta" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem">
-				<a href="${reconnectUrl}" class="cta--primary" style="background:var(--ink-rubric);box-shadow:4px 4px 0 var(--ink);">Try again →</a>
+				<a href="/authorize" class="cta--primary" style="background:var(--ink-rubric);box-shadow:4px 4px 0 var(--ink);">Try again &#x2192;</a>
 			</div>
-		</div>`,
-	);
-	return c.html(layout(content, "Marcus — Vault setup failed"));
+		</div>
+	`;
+	return c.html(layout(await content, "Marcus — Vault setup failed"));
 });
 
-app.get("/vault/conflict", (c) => {
+app.get("/vault/conflict", async (c) => {
 	const login = c.req.query("login") ?? "";
 	const settingsUrl = `https://github.com/${login}/${VAULT_REPO_NAME}/settings`;
-	const reconnectUrl = "/authorize";
-	const content = raw(
-		`<div style="max-width:560px;margin:0 auto;padding:2rem 0">
+	const content = html`
+		<div style="max-width:560px;margin:0 auto;padding:2rem 0">
 			<h1 style="font-family:var(--f-display);font-size:var(--tx-2xl);font-weight:400;letter-spacing:-.025em;text-transform:uppercase;margin-bottom:1rem">Vault name conflict</h1>
 			<div class="alert">
 				<div class="alert__title">Repository name taken</div>
-				<p class="alert__body">Marcus found a repository named <strong>${VAULT_REPO_NAME}</strong>, but it does not look like a Marcus vault. To avoid writing Marcus files into unrelated content, rename or delete that repository first, then reconnect.</p>
+				<p class="alert__body">Marcus found a repository named <strong>${VAULT_REPO_NAME}</strong>, but it does not look like a Marcus vault. Rename or delete that repository first, then reconnect.</p>
 			</div>
 			<div class="cta" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem;margin-bottom:1.5rem">
-				<a href="${settingsUrl}" target="_blank" class="cta--primary">Open repository settings ↗</a>
-				<a href="${reconnectUrl}" class="cta--secondary">Try again</a>
+				<a href="${settingsUrl}" target="_blank" rel="noopener noreferrer" class="cta--primary">Open repository settings &#x2197;</a>
+				<a href="/authorize" class="cta--secondary">Try again</a>
 			</div>
 			<p style="color:var(--subtle);font-size:var(--tx-xs);font-family:var(--f-mono)">Conflicting repo: <code style="color:var(--ink-blue)">github.com/${login}/${VAULT_REPO_NAME}</code></p>
-		</div>`,
-	);
-	return c.html(layout(content, "Marcus — Vault conflict"));
+		</div>
+	`;
+	return c.html(layout(await content, "Marcus — Vault conflict"));
 });
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.3.0", time: new Date().toISOString() }));
