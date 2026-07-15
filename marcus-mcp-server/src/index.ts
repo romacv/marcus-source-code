@@ -97,7 +97,7 @@ function excerpt(content: string, max = 60): string {
 	return compact.length <= max ? compact : `${compact.slice(0, max - 3)}...`;
 }
 
-function obsidianAlias(value: string): string {
+function wikilinkAlias(value: string): string {
 	return value.replace(/[\]|]/g, " ").replace(/\s+/g, " ").trim();
 }
 
@@ -133,11 +133,19 @@ function memoryRecordsFromFile(category: MemoryCategory, content: string): Memor
 }
 
 export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, MarcusProps> {
-	server = new McpServer({
-		name: "Marcus",
-		version: "0.3.0",
-		description: "Marcus Second Brain vault tools for durable personal memory.",
-	});
+	server = new McpServer(
+		{
+			name: "Marcus",
+			version: "0.3.0",
+			description: "Marcus Second Brain vault tools for durable personal memory.",
+		},
+		{
+			instructions:
+				"The vault is a private GitHub repository (marcus-second-brain-vault) in the user's own GitHub account, written to via the GitHub API — there is no local Obsidian install and no obsidian:// URL scheme. " +
+				"Reference a note by its repo-relative vault path (e.g. '15-memory/work.md') or, when a durable link is needed, a GitHub blob URL for that path on the vault repo. " +
+				"Never invent obsidian:// links or local filesystem paths for vault notes.",
+		},
+	);
 
 	get github(): GitHubClient {
 		if (!this.props) {
@@ -664,7 +672,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				});
 				const memoryFilePath = memoryPath(category);
 				const dailyPath = dailyNotePath(now);
-				const dailyLine = `- memory: [[15-memory/${category}#^${blockId}|${obsidianAlias(excerpt(content))}]]`;
+				const dailyLine = `- memory: [[15-memory/${category}#^${blockId}|${wikilinkAlias(excerpt(content))}]]`;
 				const msg = this.buildCommit({
 					title: `remember ${category}`,
 					tool: "remember",
