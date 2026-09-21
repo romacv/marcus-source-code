@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { provisionVault, vaultRepoState } from "../github-oauth.ts";
 import { findUnrelatedVaultEntries } from "../vault-guard.ts";
-import { assertVaultPath, buildFrontmatter, extractAutoTags, parseFrontmatter } from "../vault.ts";
+import {
+	assertVaultPath,
+	buildFrontmatter,
+	extractAutoTags,
+	parseFrontmatter,
+	stripClientFrontmatter,
+} from "../vault.ts";
 
 // --- assertVaultPath ---
 
@@ -207,4 +213,26 @@ test("findUnrelatedVaultEntries returns top-level unrelated entries", () => {
 		{ path: "random-folder/note.md" },
 	]);
 	assert.deepEqual(unrelated.sort(), ["legacy.md", "random-folder"]);
+});
+
+test("buildFrontmatter writes schema_version once even when the parsed fields carry it", () => {
+	const fm = buildFrontmatter({ ...parseFrontmatter(buildFrontmatter({ id: "x" })).frontmatter, updated: "now" });
+	assert.equal(fm.split("\n").filter((line) => line.startsWith("schema_version:")).length, 1);
+	assert.equal(fm.split("\n").filter((line) => line === "---").length, 2);
+});
+
+test("stripClientFrontmatter returns plain content untouched", () => {
+	const parsed = stripClientFrontmatter("# Title\n\nBody");
+	assert.deepEqual(parsed.frontmatter, {});
+	assert.equal(parsed.body, "# Title\n\nBody");
+});
+
+test("stripClientFrontmatter drops a client YAML block and server-owned keys", () => {
+	const content = "---\nid: client\ncreated: 2020-01-01\nschema_version: 1\ntags:\n  - swift\nsummary: \"Note\"\n---\n\n# Body";
+	const parsed = stripClientFrontmatter(content);
+	assert.deepEqual(parsed.frontmatter, { tags: ["swift"], summary: "Note" });
+	assert.equal(parsed.body, "# Body");
+	const rebuilt = `${buildFrontmatter({ id: "server", ...parsed.frontmatter })}\n\n${parsed.body}`;
+	assert.equal(rebuilt.split("\n").filter((line) => line === "---").length, 2);
+	assert.match(rebuilt, /^---\nid: "server"\n/);
 });

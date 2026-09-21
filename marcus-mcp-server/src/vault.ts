@@ -168,7 +168,7 @@ export function buildFrontmatter(fields: FrontmatterFields): string {
 	}
 
 	for (const [key, val] of Object.entries(fields)) {
-		if (written.has(key)) continue;
+		if (written.has(key) || key === "schema_version") continue;
 		if (val === undefined) continue;
 		lines.push(`${key}: ${JSON.stringify(val)}`);
 	}
@@ -176,6 +176,17 @@ export function buildFrontmatter(fields: FrontmatterFields): string {
 	lines.push("schema_version: 1");
 	lines.push("---");
 	return lines.join("\n");
+}
+
+// Keys the server owns; a client-supplied YAML block never overrides them.
+const SERVER_OWNED_KEYS = ["id", "created", "updated", "schema_version"];
+
+// Splits client-supplied note content into its own leading YAML block (if any) and the body,
+// so a write never ends up with two frontmatter blocks. Server-owned keys are dropped.
+export function stripClientFrontmatter(content: string): ParsedNote {
+	const { frontmatter, body } = parseFrontmatter(content);
+	for (const key of SERVER_OWNED_KEYS) delete frontmatter[key];
+	return { frontmatter, body };
 }
 
 type ParsedNote = {

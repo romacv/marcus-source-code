@@ -27,6 +27,7 @@ import {
 	memoryArchivePath,
 	memoryPath,
 	parseFrontmatter,
+	stripClientFrontmatter,
 	VAULT_TOPIC_FOLDERS,
 } from "./vault";
 
@@ -307,10 +308,12 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				checkVaultPath(path);
 				const id = generateUlid();
 				const now = new Date().toISOString();
-				const autoTags = extractAutoTags(content, frontmatter ?? {});
+				const { body, frontmatter: inlineFm } = stripClientFrontmatter(content);
+				const explicitFm = { ...inlineFm, ...frontmatter };
+				const autoTags = extractAutoTags(body, explicitFm);
 				const noteFrontmatter = {
-					...frontmatter,
-					...(frontmatter?.tags?.length ? {} : autoTags.length ? { tags: autoTags } : {}),
+					...explicitFm,
+					...(explicitFm.tags?.length ? {} : autoTags.length ? { tags: autoTags } : {}),
 				};
 				const fm = buildFrontmatter({
 					id,
@@ -318,7 +321,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					updated: now,
 					...noteFrontmatter,
 				});
-				const fullContent = `${fm}\n\n${content}`;
+				const fullContent = `${fm}\n\n${body}`;
 				const msg = this.buildCommit({
 					title: `create ${path}`,
 					tool: "create_note",
@@ -365,13 +368,14 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				}
 				const existing = current.content;
 				const { body: existingBody, frontmatter: fm } = parseFrontmatter(existing);
+				const { body: incoming, frontmatter: clientFm } = stripClientFrontmatter(content);
 				const now = new Date().toISOString();
-				const updatedFm = buildFrontmatter({ ...fm, updated: now });
+				const updatedFm = buildFrontmatter({ ...fm, ...clientFm, updated: now });
 
 				let newBody: string;
-				if (mode === "replace") newBody = content;
-				else if (mode === "append") newBody = `${existingBody}\n\n${content}`;
-				else newBody = `${content}\n\n${existingBody}`;
+				if (mode === "replace") newBody = incoming;
+				else if (mode === "append") newBody = `${existingBody}\n\n${incoming}`;
+				else newBody = `${incoming}\n\n${existingBody}`;
 
 				const fullContent = `${updatedFm}\n\n${newBody}`;
 				const msg = this.buildCommit({
