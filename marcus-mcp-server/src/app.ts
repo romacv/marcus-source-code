@@ -16,6 +16,7 @@ import {
 } from "./github-oauth";
 import { homeContent, layout, privacyContent, termsContent, docsContent } from "./utils";
 import { findUnrelatedVaultEntries } from "./vault-guard.ts";
+import { peekScraperLink, redeemScraperLink } from "./scraper-settings.ts";
 import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
 
 export type Bindings = MarcusEnv & {
@@ -44,7 +45,7 @@ app.use("*", async (c, next) => {
 	await next();
 });
 
-const CSP_PATHS_RE = /^\/(authorize|register|auth\/|vault\/)/;
+const CSP_PATHS_RE = /^\/(authorize|register|auth\/|vault\/|settings\/)/;
 app.use("*", async (c, next) => {
 	await next();
 	if (!CSP_PATHS_RE.test(new URL(c.req.url).pathname)) return;
@@ -331,6 +332,50 @@ app.get("/vault/conflict", async (c) => {
 		</div>
 	`;
 	return c.html(layout(await content, "Marcus — Vault conflict"));
+});
+
+// One-time page where a user saves their own Apify token for Instagram reels.
+// The link comes from the connect_reel_scraper tool, so the token never passes through chat.
+function reelsSettingsPage(body: ReturnType<typeof html>) {
+	return html`
+    <section class="section" style="max-width:560px;margin-inline:auto">
+      <p class="section__eyebrow">Reels</p>
+      <h1>Instagram access</h1>
+      ${body}
+    </section>
+  `;
+}
+
+app.get("/settings/reels", async (c) => {
+	const nonce = c.req.query("t") ?? "";
+	const userId = await peekScraperLink(c.env.MARCUS_KV, nonce);
+	const body = userId
+		? html`
+        <p>Instagram blocks anonymous access from cloud servers. Marcus fetches reels through <a href="https://apify.com" rel="noopener">Apify</a> with your own token; Apify bills your account per reel.</p>
+        <p>Get the token at apify.com &rarr; Settings &rarr; API &amp; Integrations.</p>
+        <form method="post" action="/settings/reels">
+          <input type="hidden" name="t" value="${nonce}">
+          <p><input type="password" name="token" autocomplete="off" placeholder="apify_api_..." style="width:100%;padding:.6rem"></p>
+          <p><button class="cta--primary" type="submit">Save token</button></p>
+          <p style="color:var(--subtle)">Leave empty and save to remove a stored token. This link works once and expires in 15 minutes.</p>
+        </form>`
+		: html`<p>This link is invalid or has expired. Ask your assistant for a new one.</p>`;
+	return c.html(layout(await reelsSettingsPage(body), "Reels settings · Marcus"), userId ? 200 : 410);
+});
+
+app.post("/settings/reels", async (c) => {
+	const form = await c.req.parseBody();
+	const nonce = typeof form.t === "string" ? form.t : "";
+	const token = typeof form.token === "string" ? form.token : "";
+	if (token.length > 512) return c.text("Token too long", 400);
+	const outcome = await redeemScraperLink(c.env.MARCUS_KV, c.env.KV_ENCRYPTION_KEY, nonce, token);
+	const message =
+		outcome === "saved"
+			? "Token saved. Go back to your chat and send the reel again."
+			: outcome === "removed"
+				? "Token removed."
+				: "This link is invalid or has expired. Ask your assistant for a new one.";
+	return c.html(layout(await reelsSettingsPage(html`<p>${message}</p>`), "Reels settings · Marcus"), outcome === "invalid_link" ? 410 : 200);
 });
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.3.0", time: new Date().toISOString() }));

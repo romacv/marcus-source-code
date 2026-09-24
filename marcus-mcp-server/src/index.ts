@@ -7,6 +7,7 @@ import { anonId } from "./audit";
 import { formatToolError, isStructuredToolError, StructuredToolError } from "./errors";
 import { checkAndIncrement, resolveTier } from "./rate-limit";
 import { getReelFrames, type MediaLike } from "./reel-media";
+import { createScraperLink, getScraperToken } from "./scraper-settings";
 import {
 	appendUnderHeading,
 	buildReelNote,
@@ -1135,8 +1136,12 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				if (video_url && !video_url.startsWith("https://")) {
 					throw new StructuredToolError("invalid_argument", "video_url must be https", "fix_input");
 				}
+				const apifyToken =
+					parsed.source === "instagram" && this.props
+						? ((await getScraperToken(this.env.MARCUS_KV, this.env.KV_ENCRYPTION_KEY, this.props.userId)) ?? undefined)
+						: undefined;
 				const [result, existing] = await Promise.all([
-					getReelFrames({ parsed, media: this.env.MEDIA, videoUrl: video_url, count: frames }),
+					getReelFrames({ parsed, media: this.env.MEDIA, videoUrl: video_url, apifyToken, count: frames }),
 					this.findExistingReel(parsed.source, parsed.source_id).catch(() => null),
 				]);
 				const { meta } = result;
@@ -1165,6 +1170,38 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 							{ type: "image" as const, data: frame.data, mimeType: frame.mimeType },
 						]),
 					],
+				};
+			}),
+		);
+
+		this.server.registerTool(
+			"connect_reel_scraper",
+			{
+				description:
+					"Return a one-time link (valid 15 minutes) where the user saves their own Apify API token, which reel_frames needs for Instagram. " +
+					"Call when reel_frames says Instagram blocks anonymous access, or when the user asks to set up or remove the token. Never ask the user to paste the token into chat.",
+				inputSchema: {},
+				annotations: { title: "Connect reel scraper", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+			},
+			async (_args, extra) => this.run("connect_reel_scraper", extra, async () => {
+				if (!this.props) throw new StructuredToolError("auth_required", "Not authenticated", "reauth", { reauth_url: "/authorize" });
+				const nonce = await createScraperLink(this.env.MARCUS_KV, this.props.userId);
+				let origin = "https://marcus-second-brain.com";
+				try {
+					if (extra?.requestInfo?.url) origin = new URL(String(extra.requestInfo.url)).origin;
+				} catch {}
+				const link = `${origin}/settings/reels?t=${nonce}`;
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							link,
+							expires_in_minutes: 15,
+							instructions:
+								"Give the user this link. On it they paste an Apify API token (apify.com > Settings > API & Integrations). " +
+								"Apify bills their own account per scraped reel. Submitting an empty token removes it.",
+						}),
+					}],
 				};
 			}),
 		);

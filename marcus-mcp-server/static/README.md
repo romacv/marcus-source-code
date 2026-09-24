@@ -57,6 +57,7 @@ After adding on desktop, the connector automatically appears in the **Claude iPh
 | `get_recent_notes` | Get your most recently updated notes |
 | `delete_note` | Archive or permanently delete a note |
 | `reel_frames` | Fetch an Instagram Reel / YouTube Shorts / TikTok and return its caption and key frames |
+| `connect_reel_scraper` | Give a one-time link to save your own Apify token, needed for Instagram |
 | `save_reel` | Save a reel as a note in `50-resources/reels/` and log it in today's daily note |
 | `search_reels` | Search saved reels by text, tags or author |
 | `list_reels` | List recently saved reels |
