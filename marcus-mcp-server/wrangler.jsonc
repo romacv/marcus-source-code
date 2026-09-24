@@ -50,6 +50,9 @@
 	// Secrets set via: wrangler secret put GITHUB_APP_CLIENT_ID, etc.
 	// Required: GITHUB_APP_CLIENT_ID, GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY,
 	//           GITHUB_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_SECRET, KV_ENCRYPTION_KEY
+	// Cloudflare Media Transformations: extracts still frames for the reel_frames tool.
+	// Optional at runtime: without it reel_frames falls back to cover thumbnails.
+	"media": { "binding": "MEDIA" },
 	"observability": {
 		"enabled": true
 	},

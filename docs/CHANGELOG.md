@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-24 — Reels
+
+- Новые MCP-инструменты `reel_frames`, `save_reel`, `search_reels`, `list_reels`
+- Сценарий: в чате "Marcus reels <ссылка>" -> кадры через Cloudflare Media Transformations -> заметка в `50-resources/reels/` с раскадровкой -> строка в daily note под `## Reels`
+- Новый binding `MEDIA` в `wrangler.jsonc`; без него `reel_frames` отдаёт только обложку
+
 ## 2026-05-06 — Doc cleanup
 
 - Добавлен `MVP-PROTOTYPE-PLAN.md` — ведущий executable план P0–P6 с acceptance criteria

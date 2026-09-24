@@ -6,6 +6,25 @@ import app from "./app";
 import { anonId } from "./audit";
 import { formatToolError, isStructuredToolError, StructuredToolError } from "./errors";
 import { checkAndIncrement, resolveTier } from "./rate-limit";
+import { getReelFrames, type MediaLike } from "./reel-media";
+import {
+	appendUnderHeading,
+	buildReelNote,
+	dailyReelLine,
+	findReelPathsBySourceId,
+	matchesReelFilters,
+	parseReelPath,
+	parseReelUrl,
+	ReelInputSchema,
+	REELS_DAILY_HEADING,
+	REELS_FOLDER,
+	REELS_INDEX_PATH,
+	reelNotePath,
+	reelsIndexNote,
+	reelSummaryFromContent,
+	slugify,
+	type ReelSummary,
+} from "./reels";
 import { GitHubClient } from "./github";
 import {
 	formatMemoryLine,
@@ -41,6 +60,7 @@ export type MarcusEnv = Cloudflare.Env & {
 	GITHUB_OAUTH_CLIENT_ID: string;
 	GITHUB_OAUTH_CLIENT_SECRET: string;
 	KV_ENCRYPTION_KEY: string;
+	MEDIA?: MediaLike;
 };
 
 export type MarcusProps = {
@@ -144,7 +164,9 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 			instructions:
 				"The vault is a private GitHub repository (marcus-second-brain-vault) in the user's own GitHub account, written to via the GitHub API — there is no local Obsidian install and no obsidian:// URL scheme. " +
 				"Reference a note by its repo-relative vault path (e.g. '15-memory/work.md') or, when a durable link is needed, a GitHub blob URL for that path on the vault repo. " +
-				"Never invent obsidian:// links or local filesystem paths for vault notes.",
+				"Never invent obsidian:// links or local filesystem paths for vault notes. " +
+				"Reels: when the user writes 'Marcus reels <url>', 'Маркус рилс <url>' or shares an Instagram Reel, YouTube Shorts or TikTok link to keep, " +
+				"call reel_frames, describe the frames and caption, save with save_reel, then do the useful follow-ups (remember, tasks in the daily note, links to related notes) without asking.",
 		},
 	);
 
@@ -174,9 +196,9 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 		return "unknown client";
 	}
 
-	private buildCommit(opts: { title: string; tool: string; extras?: Record<string, string> }): string {
+	private buildCommit(opts: { title: string; tool: string; extras?: Record<string, string>; headline?: string }): string {
 		const lines = [
-			`marcus-mcp-server: ${opts.title}`,
+			opts.headline ?? `marcus-mcp-server: ${opts.title}`,
 			"",
 			`Tool: ${opts.tool}`,
 			`User: @${this.props?.githubLogin ?? "unknown"}`,
@@ -285,6 +307,38 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 		}
 
 		return candidates;
+	}
+
+	private async reelPaths(): Promise<string[]> {
+		return this.github.getTreesRecursive(REELS_FOLDER).then(
+			(entries) => entries.map((e) => e.path),
+			(err: unknown) => {
+				if (this.isNotFound(err)) return [];
+				throw err;
+			},
+		);
+	}
+
+	private async findExistingReel(
+		source: string,
+		sourceId: string,
+		paths?: string[],
+	): Promise<{ path: string; frontmatter: Record<string, unknown> } | null> {
+		const candidates = findReelPathsBySourceId(paths ?? (await this.reelPaths()), sourceId);
+		for (const path of candidates) {
+			const file = await this.getFileOrNull(path);
+			if (!file) continue;
+			const { frontmatter } = parseFrontmatter(file.content);
+			if (String(frontmatter.source_id) === sourceId && String(frontmatter.source) === source) return { path, frontmatter };
+		}
+		return null;
+	}
+
+	private authorUrl(source: string, author: string): string {
+		const handle = author.replace(/^@/, "");
+		if (source === "instagram") return `https://www.instagram.com/${handle}/`;
+		if (source === "tiktok") return `https://www.tiktok.com/@${handle}`;
+		return "";
 	}
 
 	async init() {
@@ -994,6 +1048,196 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				return {
 					content: [{ type: "text" as const, text: capText(JSON.stringify(notes)) }],
 				};
+			}),
+		);
+
+		this.server.registerTool(
+			"reel_frames",
+			{
+				description:
+					"Fetch an Instagram Reel, YouTube Shorts or TikTok by URL and return its caption, author and key video frames as images. " +
+					"Call when the user writes 'Marcus reels <url>' / 'Маркус рилс <url>' or shares a short-video link to save. " +
+					"Then describe each frame, call save_reel with the breakdown, and act on the content.",
+				inputSchema: {
+					url: z.string().describe("Reel / Shorts / TikTok URL"),
+					frames: z.number().int().min(1).max(12).default(6).describe("How many evenly spaced frames to extract"),
+					video_url: z
+						.string()
+						.url()
+						.optional()
+						.describe("Optional direct https MP4 link, used when the page is behind a login wall"),
+				},
+				annotations: { title: "Reel frames", readOnlyHint: true, openWorldHint: true, destructiveHint: false },
+			},
+			async ({ url, frames, video_url }, extra) => this.run("reel_frames", extra, async () => {
+				const parsed = parseReelUrl(url);
+				if (!parsed) {
+					throw new StructuredToolError(
+						"invalid_argument",
+						"Unsupported URL. Supported: instagram.com/reel|p/<code>, youtube.com/shorts/<id>, tiktok.com/@user/video/<id>",
+						"fix_input",
+					);
+				}
+				if (video_url && !video_url.startsWith("https://")) {
+					throw new StructuredToolError("invalid_argument", "video_url must be https", "fix_input");
+				}
+				const [result, existing] = await Promise.all([
+					getReelFrames({ parsed, media: this.env.MEDIA, videoUrl: video_url, count: frames }),
+					this.findExistingReel(parsed.source, parsed.source_id).catch(() => null),
+				]);
+				const { meta } = result;
+				const header = {
+					source: meta.source,
+					source_id: meta.source_id,
+					url: meta.url,
+					author: meta.author,
+					author_url: meta.author ? this.authorUrl(meta.source, meta.author) : "",
+					title: meta.title,
+					description: meta.caption,
+					duration_sec: meta.durationSec,
+					frames: result.frames.map((f) => ({ time_sec: f.time_sec, label: f.label })),
+					warnings: result.warnings,
+					existing_note: existing?.path ?? null,
+					next_step:
+						"Describe what is on screen in each frame (text overlays, UI, code, products, places), infer the idea of the video, " +
+						"then call save_reel with these fields plus summary, bullets, tags, links and frames[{time_sec, description}]. " +
+						"After saving, act on it: remember durable facts, append concrete to-dos to the daily note, link related notes.",
+				};
+				return {
+					content: [
+						{ type: "text" as const, text: capText(JSON.stringify(header)) },
+						...result.frames.flatMap((frame) => [
+							{ type: "text" as const, text: `Frame ${frame.label}` },
+							{ type: "image" as const, data: frame.data, mimeType: frame.mimeType },
+						]),
+					],
+				};
+			}),
+		);
+
+		this.server.registerTool(
+			"save_reel",
+			{
+				description:
+					"Save a short video (Reel / Shorts / TikTok) as a structured note in 50-resources/reels/ and log it in today's daily note under '## Reels'. " +
+					"Idempotent by source + source_id: saving again updates the existing note. Use after reel_frames.",
+				inputSchema: ReelInputSchema.shape,
+				annotations: { title: "Save reel", readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+			},
+			async (args, extra) => this.run("save_reel", extra, async () => {
+				const input = ReelInputSchema.parse(args);
+				const now = new Date();
+				const today = todayIsoDate(now);
+				const allPaths = await this.reelPaths();
+				const existing = await this.findExistingReel(input.source, input.source_id, allPaths);
+				const path = existing?.path ?? reelNotePath(input, today);
+				checkVaultPath(path);
+				const created = existing ? String(existing.frontmatter.created ?? today) : today;
+				const id = existing?.frontmatter.id ? String(existing.frontmatter.id) : undefined;
+				const note = buildReelNote(input, { created, id, now });
+				const dailyPath = dailyNotePath(now);
+				const msg = this.buildCommit({
+					title: `${existing ? "update" : "add"} reel ${input.source_id}`,
+					headline: `reels: ${existing ? "update" : "add"} ${input.source_id}`,
+					tool: "save_reel",
+					extras: { Source: input.source, Path: path },
+				});
+
+				const sha = await this.commitWithHeadRetry(msg, async () => {
+					const files = [{ path, content: note }];
+					if (existing) return files;
+					const dailyFile = await this.getFileOrNull(dailyPath);
+					files.push({
+						path: dailyPath,
+						content: appendUnderHeading(
+							dailyFile?.content ?? initialDailyNote(now),
+							REELS_DAILY_HEADING,
+							dailyReelLine(path, input.summary),
+						),
+					});
+					if (!allPaths.includes(REELS_INDEX_PATH)) files.push({ path: REELS_INDEX_PATH, content: reelsIndexNote(now) });
+					return files;
+				});
+
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: JSON.stringify({ path, sha, updated: Boolean(existing), daily_path: existing ? null : dailyPath }),
+						},
+					],
+				};
+			}),
+		);
+
+		this.server.registerTool(
+			"search_reels",
+			{
+				description:
+					"Search saved Reels / Shorts / TikTok notes by text (title, summary, frames, caption), optionally filtered by tags or author.",
+				inputSchema: {
+					query: z.string().describe("Text to look for; empty string matches all"),
+					tags: z.array(z.string()).optional(),
+					author: z.string().optional(),
+					limit: z.number().int().min(1).max(50).default(10),
+				},
+				annotations: { title: "Search reels", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+			},
+			async ({ query, tags, author, limit }, extra) => this.run("search_reels", extra, async () => {
+				const paths = await this.reelPaths();
+				const newest = paths
+					.filter((p) => parseReelPath(p))
+					.sort((a, b) => b.localeCompare(a));
+				const q = query.trim();
+				const codeHits = q
+					? await this.github
+							.searchCode(q, { folder: REELS_FOLDER, limit: 20 })
+							.then((hits) => hits.map((h) => h.path).filter((p) => parseReelPath(p)))
+							.catch(() => [] as string[])
+					: [];
+				const candidates = [...new Set([...codeHits, ...newest])].slice(0, 50);
+				const files = await this.github.getContentsBatch(candidates);
+				const needle = q.toLowerCase();
+				const results: ReelSummary[] = [];
+				for (const file of files) {
+					const reel = reelSummaryFromContent(file.path, file.content);
+					if (!reel || !matchesReelFilters(reel, { tags, author })) continue;
+					if (needle && !file.content.toLowerCase().includes(needle)) continue;
+					results.push(reel);
+				}
+				results.sort((a, b) => b.created.localeCompare(a.created));
+				return { content: [{ type: "text" as const, text: capText(JSON.stringify(results.slice(0, limit))) }] };
+			}),
+		);
+
+		this.server.registerTool(
+			"list_reels",
+			{
+				description: "List recently saved Reels / Shorts / TikTok notes, newest first.",
+				inputSchema: {
+					since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Only notes saved on or after YYYY-MM-DD"),
+					author: z.string().optional(),
+					limit: z.number().int().min(1).max(50).default(10),
+				},
+				annotations: { title: "List reels", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+			},
+			async ({ since, author, limit }, extra) => this.run("list_reels", extra, async () => {
+				const authorSlug = author ? slugify(author) : null;
+				const entries = (await this.reelPaths())
+					.map((p) => parseReelPath(p))
+					.filter((e): e is NonNullable<typeof e> => Boolean(e))
+					.filter((e) => !since || e.created >= since)
+					.filter((e) => !authorSlug || e.rest.startsWith(`${authorSlug}-`))
+					.sort((a, b) => b.path.localeCompare(a.path))
+					.slice(0, limit);
+				const files = await this.github.getContentsBatch(entries.map((e) => e.path));
+				const byPath = new Map(files.map((f) => [f.path, f]));
+				const results = entries.flatMap((e) => {
+					const file = byPath.get(e.path);
+					const reel = file ? reelSummaryFromContent(e.path, file.content) : null;
+					return reel ? [reel] : [];
+				});
+				return { content: [{ type: "text" as const, text: capText(JSON.stringify(results)) }] };
 			}),
 		);
 	}
