@@ -56,6 +56,12 @@ After adding on desktop, the connector automatically appears in the **Claude iPh
 | `link_notes` | Connect two notes with a wikilink |
 | `get_recent_notes` | Get your most recently updated notes |
 | `delete_note` | Archive or permanently delete a note |
+| `reel_frames` | Fetch an Instagram Reel / YouTube Shorts / TikTok and return its caption and key frames |
+| `save_reel` | Save a reel as a note in `50-resources/reels/` and log it in today's daily note |
+| `search_reels` | Search saved reels by text, tags or author |
+| `list_reels` | List recently saved reels |
+
+**Reels:** write *"Marcus reels <link>"* in chat. Claude looks at the frames, saves a note with a frame-by-frame breakdown, then files any follow-ups (memories, to-dos) on its own. Videos are processed in memory and never stored.
 
 ---
 

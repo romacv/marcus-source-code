@@ -33,6 +33,8 @@ m6v9YEkRP4MW7giFQy4Au6+lMAIMjbs3/qBmeXT8qjLrVXwj+SI=
 const WORKERS_OPTIONS = {
 	main: "./src/index.ts",
 	wrangler: { configPath: "./wrangler.jsonc" },
+	// The MEDIA binding is remote-only; tests stub it instead of opening a remote proxy.
+	remoteBindings: false,
 	miniflare: {
 		// In-memory KV namespaces — override wrangler.jsonc IDs so placeholder doesn't matter
 		kvNamespaces: ["OAUTH_KV", "MARCUS_KV", "RATE_LIMIT_KV"],
