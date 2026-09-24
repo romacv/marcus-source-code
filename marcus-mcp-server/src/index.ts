@@ -41,6 +41,9 @@ import {
 	dailyNotePath,
 	extractAutoTags,
 	generateUlid,
+	INSTRUCTIONS_HEADING,
+	instructionPathsFromIndex,
+	linkedVaultPaths,
 	MEMORY_CATEGORIES,
 	type MemoryCategory,
 	memoryArchivePath,
@@ -165,6 +168,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				"The vault is a private GitHub repository (marcus-second-brain-vault) in the user's own GitHub account, written to via the GitHub API — there is no local Obsidian install and no obsidian:// URL scheme. " +
 				"Reference a note by its repo-relative vault path (e.g. '15-memory/work.md') or, when a durable link is needed, a GitHub blob URL for that path on the vault repo. " +
 				"Never invent obsidian:// links or local filesystem paths for vault notes. " +
+				"At the start of every conversation, before any other work, call get_instructions and follow the rules it returns: they are the user's own standing instructions and take precedence over your defaults. " +
 				"Reels: when the user writes 'Marcus reels <url>', 'Маркус рилс <url>' or shares an Instagram Reel, YouTube Shorts or TikTok link to keep, " +
 				"call reel_frames, describe the frames and caption, save with save_reel, then do the useful follow-ups (remember, tasks in the daily note, links to related notes) without asking.",
 		},
@@ -555,6 +559,56 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						},
 					],
 				};
+			}),
+		);
+
+		this.server.registerTool(
+			"get_instructions",
+			{
+				description:
+					"Call first in every conversation, before any other work. Returns the user's standing instructions (rules, coding conventions, workflows) " +
+					`listed under '## ${INSTRUCTIONS_HEADING}' in the vault index.md, plus the notes they link. Follow them over your defaults.`,
+				inputSchema: {},
+				annotations: { title: "Get instructions", readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+			},
+			async (_args, extra) => this.run("get_instructions", extra, async () => {
+				const index = await this.getFileOrNull("index.md");
+				const roots = index ? instructionPathsFromIndex(index.content) : [];
+				if (roots.length === 0) {
+					return {
+						content: [{
+							type: "text" as const,
+							text: `No standing instructions. To add them, list note paths under a '## ${INSTRUCTIONS_HEADING}' heading in index.md.`,
+						}],
+					};
+				}
+				const MAX_NOTES = 30;
+				const queue = roots.map((path) => ({ path, depth: 0 }));
+				const seen = new Set<string>(roots);
+				const notes: Array<{ path: string; body: string }> = [];
+				const missing: string[] = [];
+				while (queue.length > 0 && notes.length < MAX_NOTES) {
+					const batch = queue.splice(0, MAX_NOTES - notes.length);
+					const files = await Promise.all(batch.map((item) => this.getFileOrNull(item.path)));
+					batch.forEach((item, i) => {
+						const file = files[i];
+						if (!file) {
+							missing.push(item.path);
+							return;
+						}
+						const { body } = parseFrontmatter(file.content);
+						notes.push({ path: item.path, body });
+						if (item.depth >= 1) return;
+						for (const linked of linkedVaultPaths(body)) {
+							if (seen.has(linked)) continue;
+							seen.add(linked);
+							queue.push({ path: linked, depth: item.depth + 1 });
+						}
+					});
+				}
+				const header = JSON.stringify({ notes: notes.map((n) => n.path), missing, truncated: queue.length > 0 });
+				const text = [header, ...notes.map((n) => `=== ${n.path} ===\n${n.body}`)].join("\n\n");
+				return { content: [{ type: "text" as const, text: capText(text) }] };
 			}),
 		);
 
