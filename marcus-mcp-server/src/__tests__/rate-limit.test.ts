@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { anonId } from "../audit.ts";
-import { checkAndIncrement, FREE_DAILY_CAP } from "../rate-limit.ts";
+import { checkAndIncrement, dailyCapFor, FREE_DAILY_CAP } from "../rate-limit.ts";
 import { isStructuredToolError } from "../errors.ts";
 
 const TEST_ENC_KEY = "b".repeat(64);
@@ -79,4 +79,18 @@ test("Retry-After roughly matches seconds-until-UTC-midnight", async () => {
 		const ms = err.extras?.retry_after_ms;
 		assert.ok(typeof ms === "number" && ms > 43000_000 && ms < 43300_000, `got ${ms}`);
 	}
+});
+
+test("dailyCapFor: romacv gets triple cap, others the default", () => {
+	assert.equal(dailyCapFor("romacv"), FREE_DAILY_CAP * 3);
+	assert.equal(dailyCapFor("RomaCV"), FREE_DAILY_CAP * 3);
+	assert.equal(dailyCapFor("someone"), FREE_DAILY_CAP);
+});
+
+test("custom dailyCap: allows calls past the default cap", async () => {
+	const kv = fakeKv() as any;
+	const uid = await anonId("u1", TEST_ENC_KEY);
+	kv.store.set(`rl:${uid}:2026-05-10`, { value: String(FREE_DAILY_CAP) });
+	await checkAndIncrement({ kv, userId: "u1", tier: "free", encryptionKey: TEST_ENC_KEY, dailyCap: FREE_DAILY_CAP * 3, now: () => FIXED });
+	assert.equal(kv.store.get(`rl:${uid}:2026-05-10`)?.value, String(FREE_DAILY_CAP + 1));
 });

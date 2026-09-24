@@ -2,6 +2,8 @@ import { anonId } from "./audit.ts";
 import { StructuredToolError } from "./errors.ts";
 
 export const FREE_DAILY_CAP = 30;
+// Per-account free-tier caps, keyed by lowercase GitHub login.
+const DAILY_CAP_OVERRIDES: Record<string, number> = { romacv: FREE_DAILY_CAP * 3 };
 export const KV_KEY_PREFIX = "rl";
 const TTL_SECONDS = 60 * 60 * 48; // 48h — survives UTC rollover
 
@@ -12,6 +14,8 @@ export type RateLimitDeps = {
 	userId: string;
 	tier: Tier;
 	encryptionKey: string;
+	/** Free-tier daily cap; defaults to FREE_DAILY_CAP */
+	dailyCap?: number;
 	/** Override for tests — defaults to current UTC date */
 	now?: () => Date;
 };
@@ -39,14 +43,15 @@ export async function checkAndIncrement(deps: RateLimitDeps): Promise<void> {
 	const uid = await anonId(deps.userId, deps.encryptionKey);
 	const key = `${KV_KEY_PREFIX}:${uid}:${dateKey}`;
 
+	const cap = deps.dailyCap ?? FREE_DAILY_CAP;
 	const raw = await deps.kv.get(key);
 	const current = raw ? Number(raw) || 0 : 0;
 
-	if (current >= FREE_DAILY_CAP) {
+	if (current >= cap) {
 		const retryAfter = secondsUntilUtcMidnight(now);
 		throw new StructuredToolError(
 			"rate_limited",
-			`Free tier daily cap of ${FREE_DAILY_CAP} calls reached. ` +
+			`Free tier daily cap of ${cap} calls reached. ` +
 				`Resets in ${Math.ceil(retryAfter / 60)} min (UTC midnight). ` +
 				`Upgrade at https://marcus-second-brain.com/pricing`,
 			"retry",
@@ -56,6 +61,10 @@ export async function checkAndIncrement(deps: RateLimitDeps): Promise<void> {
 
 	// Eventual-consistency is acceptable for a daily cap.
 	await deps.kv.put(key, String(current + 1), { expirationTtl: TTL_SECONDS });
+}
+
+export function dailyCapFor(githubLogin: string): number {
+	return DAILY_CAP_OVERRIDES[githubLogin.toLowerCase()] ?? FREE_DAILY_CAP;
 }
 
 /** Stub for future tier lookup. Today: everyone is free. */

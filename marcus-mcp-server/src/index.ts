@@ -5,7 +5,7 @@ import { z } from "zod";
 import app from "./app";
 import { anonId } from "./audit";
 import { formatToolError, isStructuredToolError, StructuredToolError } from "./errors";
-import { checkAndIncrement, resolveTier } from "./rate-limit";
+import { checkAndIncrement, dailyCapFor, resolveTier } from "./rate-limit";
 import { getReelFrames, type MediaLike } from "./reel-media";
 import { createScraperLink, getScraperToken } from "./scraper-settings";
 import {
@@ -226,6 +226,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					kv: this.env.RATE_LIMIT_KV,
 					userId: this.props.userId,
 					tier: resolveTier(this.props.userId),
+					dailyCap: dailyCapFor(this.props.githubLogin),
 					encryptionKey: this.env.KV_ENCRYPTION_KEY,
 				});
 			}
