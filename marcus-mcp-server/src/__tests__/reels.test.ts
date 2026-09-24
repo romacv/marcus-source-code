@@ -61,21 +61,21 @@ test("extractInstagramReel: plain JSON in page", () => {
 });
 
 test("extractInstagramReel: JSON nested inside a JSON string", () => {
-	const inner = JSON.stringify({ video_url: "https://cdn.example/v2.mp4", owner: { username: "bali_cars" } });
+	const inner = JSON.stringify({ video_url: "https://cdn.example/v2.mp4", owner: { username: "car_reviews" } });
 	const html = `<script>window.__data = ${JSON.stringify(inner)};</script>`;
 	const r = extractInstagramReel(html);
 	assert.equal(r.videoUrl, "https://cdn.example/v2.mp4");
-	assert.equal(r.author, "bali_cars");
+	assert.equal(r.author, "car_reviews");
 });
 
 test("extractInstagramReel: embed HTML caption and og tags", () => {
 	const html = `<meta property="og:image" content="https://cdn.example/cover.jpg?a=1&amp;b=2">
 <a class="UsernameText" href="#">travel_guy</a>
-<div class="Caption"><a class="CaptionUsername" href="#">travel_guy</a><br>Ubud rice terraces &amp; coffee<br>#bali<div class="CaptionComments"></div></div>`;
+<div class="Caption"><a class="CaptionUsername" href="#">travel_guy</a><br>Mountain trail &amp; coffee<br>#hiking<div class="CaptionComments"></div></div>`;
 	const r = extractInstagramReel(html);
 	assert.equal(r.videoUrl, null);
 	assert.equal(r.author, "travel_guy");
-	assert.equal(r.caption, "Ubud rice terraces & coffee\n#bali");
+	assert.equal(r.caption, "Mountain trail & coffee\n#hiking");
 	assert.equal(r.thumbnailUrl, "https://cdn.example/cover.jpg?a=1&b=2");
 });
 

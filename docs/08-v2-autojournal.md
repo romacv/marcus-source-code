@@ -102,8 +102,8 @@ Apple App Store Guideline 5.1.2(i) с ноября 2025 требует:
 2. "Что я делал вчера?"
 3. Claude через MCP `search_notes` находит `10-journal/2026-04-25.md`
 4. Через `get_note` читает entry
-5. Делает recap: "Вчера ты обедал с Машей в кафе на Чангу, потом..."
-6. Юзер: "На самом деле там был Pavel а не Маша, поправь"
+5. Делает recap: "Вчера ты обедал с Alex в кафе, потом..."
+6. Юзер: "На самом деле там был Pavel а не Alex, поправь"
 7. Claude через `update_note` правит запись в репо
 
 Это feedback loop делает дневник точным со временем.
@@ -121,7 +121,7 @@ AutoJournal попадает в Q4 2026 - Q1 2027 release iOS app, после MV
 
 ## Open questions для v2
 
-1. Stub-creation для людей которых нет в репо: Marcus должен сам создавать `30-people/Маша.md` или ждать что юзер сам создаст?
-2. Geo-tags в frontmatter: storing approximate area ("Bali, Чангу") vs не storing вообще
+1. Stub-creation для людей которых нет в репо: Marcus должен сам создавать `30-people/Alex.md` или ждать что юзер сам создаст?
+2. Geo-tags в frontmatter: storing approximate area ("City, District") vs не storing вообще
 3. Photo asset IDs: deep link `photos-redirect://asset/ABC123` стабилен через iCloud sync или может сломаться?
 4. Backfill старых фото: позволить юзеру указать "обработай мне последние 30 дней" - это thousands MCP calls, нужен batch endpoint и rate-limiting

@@ -43,6 +43,6 @@ Subscription с rate limits на MCP коннектор. Тарифы → [05-pr
 5. Юзер вставляет в claude.ai/settings/connectors -> Add custom connector
 6. Все, можно работать
 
-В чате юзер пишет: "сохрани что я сегодня встретил Машу в кафе на пляже Чангу". Claude сам решает вызвать `marcus.create_note` с уже саммаризированным контентом и frontmatter тегами. Marcus коммитит файл в GitHub. Когда юзер позже спросит "что я делал на той неделе?", Claude через MCP search находит заметки и отвечает.
+В чате юзер пишет: "сохрани что я сегодня встретил Alex в кафе на пляже". Claude сам решает вызвать `marcus.create_note` с уже саммаризированным контентом и frontmatter тегами. Marcus коммитит файл в GitHub. Когда юзер позже спросит "что я делал на той неделе?", Claude через MCP search находит заметки и отвечает.
 
 Полная таблица решений → [07-roadmap-and-decisions.md](./07-roadmap-and-decisions.md).
