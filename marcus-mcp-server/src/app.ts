@@ -352,7 +352,13 @@ app.get("/settings/reels", async (c) => {
 	const body = userId
 		? html`
         <p>Instagram blocks anonymous access from cloud servers. Marcus fetches reels through <a href="https://apify.com" rel="noopener">Apify</a> with your own token; Apify bills your account per reel.</p>
-        <p>Get the token at apify.com &rarr; Settings &rarr; API &amp; Integrations.</p>
+        <h2>Get your token</h2>
+        <ol class="connect-steps">
+          <li>Create a free account at <a href="https://console.apify.com/sign-up" rel="noopener">console.apify.com/sign-up</a> (or sign in).</li>
+          <li>Open <a href="https://console.apify.com/settings/integrations" rel="noopener">Settings &rarr; API &amp; Integrations</a>.</li>
+          <li>In <strong>Personal API tokens</strong>, click the copy icon next to the default token.</li>
+          <li>Paste it below and click <strong>Save token</strong>.</li>
+        </ol>
         <form method="post" action="/settings/reels">
           <input type="hidden" name="t" value="${nonce}">
           <p><input type="password" name="token" autocomplete="off" placeholder="apify_api_..." style="width:100%;padding:.6rem"></p>
