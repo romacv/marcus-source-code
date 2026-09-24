@@ -331,3 +331,31 @@ export function archivePath(path: string): string {
 	const safe = path.split("/").filter((s) => s && s !== ".." && s !== ".").join("/");
 	return `90-archive/${safe}`;
 }
+
+export const INSTRUCTIONS_HEADING = "Instructions";
+
+// Vault paths referenced in a note: [[wikilinks]], markdown links and bare paths.
+export function linkedVaultPaths(content: string): string[] {
+	const found = new Set<string>();
+	const add = (raw: string) => {
+		const path = raw.trim().replace(/^\.?\//, "").split("#")[0].split("|")[0];
+		const withExt = path.endsWith(".md") ? path : `${path}.md`;
+		try {
+			assertVaultPath(withExt);
+			found.add(withExt);
+		} catch {}
+	};
+	for (const m of content.matchAll(/\[\[([^\]]+)\]\]/g)) add(m[1]);
+	for (const m of content.matchAll(/\]\(([^)\s]+\.md)\)/g)) add(decodeURIComponent(m[1]));
+	for (const m of content.matchAll(/(?:^|[\s`])(\d\d-[^\s`()]+?\.md)(?=[\s`.,;:]|$)/gm)) add(m[1]);
+	return [...found];
+}
+
+// Paths listed under the "## Instructions" section of the vault index.
+export function instructionPathsFromIndex(indexContent: string): string[] {
+	const lines = indexContent.split("\n");
+	const start = lines.findIndex((l) => l.trim().toLowerCase() === `## ${INSTRUCTIONS_HEADING.toLowerCase()}`);
+	if (start === -1) return [];
+	const end = lines.findIndex((l, i) => i > start && /^#{1,2} /.test(l));
+	return linkedVaultPaths(lines.slice(start + 1, end === -1 ? undefined : end).join("\n"));
+}

@@ -94,7 +94,7 @@ marcus-vault/
 │   └── 2026/04/2026-04-26.md
 ├── 10-journal/            # Журналинг записи
 ├── 20-topics/             # Topic notes
-├── 30-people/             # People notes (Maша, Pavel...)
+├── 30-people/             # People notes (Alex, Pavel...)
 ├── 40-projects/           # Active projects
 ├── 50-resources/          # Reference materials
 ├── 60-photos/             # Photo descriptions (не сами фото)
@@ -121,14 +121,13 @@ created: 2026-04-26T14:32:00Z   # ISO 8601 UTC
 updated: 2026-04-26T15:45:00Z
 tags:
   - travel
-  - bali
 source: chat                     # chat | photo | voice | calendar | manual
-summary: "Встреча с Машей в кафе на пляже Чангу" # ≤280 chars
+summary: "Встреча в кафе на пляже" # ≤280 chars
 links:
-  - "[[Maша]]"
-  - "[[Кафе на Чангу]]"
+  - "[[Alex]]"
+  - "[[Кафе на пляже]]"
 people:
-  - "[[Маша]]"
+  - "[[Alex]]"
 status: published                # draft | published | archived
 schema_version: 1                # Forward migration marker
 ---

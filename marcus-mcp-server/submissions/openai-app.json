@@ -297,7 +297,7 @@
 	"negative_test_cases": [
 		{
 			"description": "Do not trigger for general web search.",
-			"user_prompt": "Search the web for today's weather in Bali.",
+			"user_prompt": "Search the web for today's weather in London.",
 			"file_attachment_urls": null,
 			"tools_triggered": null,
 			"expected_output": "The app should not be invoked because the request is unrelated to the user's private vault.",

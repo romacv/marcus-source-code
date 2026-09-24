@@ -66,3 +66,5 @@ out/
 .yarn/unplugged
 .yarn/install-state.gz
 .pnp.*
+# Wrangler local state and account cache
+.wrangler/
