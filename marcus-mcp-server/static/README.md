@@ -63,10 +63,7 @@ After adding on desktop, the connector automatically appears in the **Claude iPh
 
 **Reels:** write *"Marcus reels <link>"* in chat. Claude looks at the frames, saves a note with a frame-by-frame breakdown, then files any follow-ups (memories, to-dos) on its own. Videos are processed in memory and never stored.
 
-**Instagram:** Instagram blocks anonymous access from cloud servers, and Marcus never stores your tokens. Two ways to get Instagram reels:
-
-1. Connect the official Apify connector (`https://mcp.apify.com`) with your own Apify account. When Instagram is blocked, Claude resolves the link through it and calls `reel_frames` again with the direct `video_url`. Marcus never sees your Apify token.
-2. Send your Apify token in the `X-Apify-Token` request header. It is used only for that one call, in memory, and is never written or logged.
+**Instagram:** Instagram blocks anonymous access from cloud servers, and Marcus never stores or sees your tokens. Connect the official Apify connector (`https://mcp.apify.com`) with your own Apify account. When Instagram is blocked, Claude resolves the link through it and calls `reel_frames` again with the direct `video_url`.
 
 ---
 

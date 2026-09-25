@@ -75,67 +75,9 @@ async function fetchOEmbed(url: string): Promise<OEmbed> {
 	}
 }
 
-const APIFY_INSTAGRAM_URL = "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?timeout=120";
-
-type ApifyInstagramItem = {
-	videoUrl?: string;
-	caption?: string;
-	ownerUsername?: string;
-	videoDuration?: number;
-	displayUrl?: string;
-};
-
-// Instagram blocks anonymous requests from cloud IPs; the user's own Apify token gets through.
-const MAX_APIFY_TOKEN_LEN = 512;
-
-// Reads the caller's Apify token from the X-Apify-Token request header. The token lives only
-// for the current call: it is never written to storage and must never be logged.
-export function apifyTokenFromHeaders(
-	headers: Record<string, string | string[] | undefined> | Headers | undefined,
-): string | undefined {
-	if (!headers) return undefined;
-	let raw: string | string[] | null | undefined;
-	if (headers instanceof Headers) {
-		raw = headers.get("x-apify-token");
-	} else {
-		const key = Object.keys(headers).find((k) => k.toLowerCase() === "x-apify-token");
-		raw = key === undefined ? undefined : headers[key];
-	}
-	const value = (Array.isArray(raw) ? raw[0] : raw)?.trim();
-	if (!value || value.length > MAX_APIFY_TOKEN_LEN) return undefined;
-	return value;
-}
-
-export async function fetchInstagramViaApify(url: string, token: string): Promise<ExtractedReel | null> {
-	try {
-		const res = await fetch(APIFY_INSTAGRAM_URL, {
-			method: "POST",
-			headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-			body: JSON.stringify({ directUrls: [url], resultsType: "posts", resultsLimit: 1, addParentData: false }),
-		});
-		if (!res.ok) return null;
-		const items = (await res.json()) as ApifyInstagramItem[];
-		const item = Array.isArray(items) ? items[0] : undefined;
-		if (!item) return null;
-		return {
-			videoUrl: item.videoUrl ?? null,
-			author: item.ownerUsername ?? "",
-			caption: item.caption ?? "",
-			durationSec: typeof item.videoDuration === "number" ? item.videoDuration : null,
-			thumbnailUrl: item.displayUrl ?? null,
-		};
-	} catch {
-		return null;
-	}
-}
-
-async function resolveSource(parsed: ParsedReelUrl, apifyToken?: string): Promise<ExtractedReel & { title: string }> {
+async function resolveSource(parsed: ParsedReelUrl): Promise<ExtractedReel & { title: string }> {
 	const empty: ExtractedReel = { videoUrl: null, author: "", caption: "", durationSec: null, thumbnailUrl: null };
 	if (parsed.source === "instagram") {
-		if (apifyToken) {
-			const viaApify = await fetchInstagramViaApify(parsed.url, apifyToken);
-			if (viaApify && (viaApify.videoUrl || viaApify.caption)) return { ...viaApify, title: "" };
-		}
 		for (const pageUrl of [`${parsed.url}embed/captioned/`, parsed.url]) {
 			const html = await fetchText(pageUrl);
 			if (!html) continue;
@@ -180,12 +122,11 @@ export async function getReelFrames(opts: {
 	parsed: ParsedReelUrl;
 	media?: MediaLike;
 	videoUrl?: string;
-	apifyToken?: string;
 	count: number;
 }): Promise<ReelFramesResult> {
 	const { parsed, media, count } = opts;
 	const warnings: string[] = [];
-	const source = await resolveSource(parsed, opts.apifyToken);
+	const source = await resolveSource(parsed);
 	const videoUrl = opts.videoUrl ?? source.videoUrl;
 	let frames: ReelFrame[] = [];
 
@@ -215,9 +156,9 @@ export async function getReelFrames(opts: {
 	if (frames.length === 0 && !source.caption) {
 		throw new StructuredToolError(
 			"upstream_unavailable",
-			parsed.source === "instagram" && !opts.apifyToken
+			parsed.source === "instagram"
 				? `Instagram blocks anonymous access to ${parsed.url}. Resolve the link with the user's own Apify connector (https://mcp.apify.com) ` +
-					"and call reel_frames again with video_url set to the direct MP4 link, or send the request with an X-Apify-Token header."
+					"and call reel_frames again with video_url set to the direct MP4 link."
 				: `Could not fetch frames or caption for ${parsed.url}. The post may be private or deleted; pass video_url with a direct MP4 link.`,
 			"fix_input",
 		);

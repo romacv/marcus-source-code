@@ -335,7 +335,7 @@ app.get("/vault/conflict", async (c) => {
 
 // Retired: Marcus no longer stores third-party tokens. Kept for one release, then remove.
 app.on(["GET", "POST"], "/settings/reels", (c) =>
-	c.text("This page is no longer used. Marcus does not store Apify tokens; set the token on the client side (X-Apify-Token header or your own Apify connector).", 410),
+	c.text("This page is no longer used. Marcus does not store Apify tokens; connect your own Apify connector in your AI client instead.", 410),
 );
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.3.0", time: new Date().toISOString() }));

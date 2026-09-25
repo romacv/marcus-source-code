@@ -23,24 +23,28 @@ Use the first option that works.
    service (for example `https://mcp.apify.com`) with their own OAuth in their AI client.
    The client calls that connector and passes only the result (a URL, a text) to Marcus.
    Marcus never sees the token.
-2. **Per-request header.** The client sends the token in a header such as `X-Apify-Token`
-   on each request. The worker reads it in memory for that one call, never writes it, never
-   puts it into an error message or a log line. Limit its length and trim it.
+2. **Secret in the user's own GitHub repository.** The user adds the token as a GitHub
+   Actions secret in their own vault repository (Settings > Secrets and variables > Actions).
+   GitHub secrets are write-only: nobody, Marcus included, can read the value back through the
+   API. Marcus only triggers a workflow in that repository (`workflow_dispatch`); the job runs
+   on GitHub with the secret and commits the result into the vault. The token never reaches
+   the worker. Needs the GitHub App permission `actions: write` and a workflow file in the
+   vault. Not implemented yet; this is the pattern for services without their own connector
+   (for example a Telegram bot token).
 3. **Nothing on our side.** If neither works, the feature is not built as a hosted feature.
    A self-hosted deployment where the user is the owner of the Cloudflare account can set its
    own secrets.
 
 Not allowed: settings pages that save a token, "one-time links" that end with a stored
-token, tokens in the user's vault repository read by the worker, tokens in tool arguments
-that get echoed back.
+token, tokens in request headers or tool arguments that the worker reads, tokens in plain
+files in the user's vault.
 
 ## Checklist for a new integration (Telegram, Apify, ...)
 
 - [ ] Which of options 1 or 2 is used, and why not 1.
 - [ ] `grep -rn "kv.put\|\.put(" src` shows no key with a credential.
 - [ ] The credential does not appear in `console.*`, error messages, tool output, audit logs.
-- [ ] A test proves the header is read, trimmed and length-limited, and that the error text
-      does not contain the token.
+- [ ] The token never enters the worker at all (options 1 or 2).
 - [ ] The privacy page (`src/utils.ts`) still says Marcus stores no third-party credentials.
 
 ## History

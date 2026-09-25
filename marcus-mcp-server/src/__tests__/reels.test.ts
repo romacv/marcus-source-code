@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { apifyTokenFromHeaders, getReelFrames, type MediaLike } from "../reel-media.ts";
+import { getReelFrames, type MediaLike } from "../reel-media.ts";
 import {
 	appendUnderHeading,
 	buildReelNote,
@@ -254,28 +254,8 @@ test("getReelFrames: nothing reachable -> upstream_unavailable", async () => {
 			(err: { code?: string; message?: string }) =>
 				err.code === "upstream_unavailable" &&
 				/https:\/\/mcp\.apify\.com/.test(err.message ?? "") &&
-				/video_url/.test(err.message ?? "") &&
-				/X-Apify-Token/.test(err.message ?? ""),
+				/video_url/.test(err.message ?? ""),
 		);
 	});
 });
 
-// --- apifyTokenFromHeaders ---
-
-test("apifyTokenFromHeaders: plain object, any header case, trimmed", () => {
-	assert.equal(apifyTokenFromHeaders({ "x-apify-token": "  apify_api_abc  " }), "apify_api_abc");
-	assert.equal(apifyTokenFromHeaders({ "X-Apify-Token": "apify_api_abc" }), "apify_api_abc");
-	assert.equal(apifyTokenFromHeaders({ "x-apify-token": ["apify_api_abc", "other"] }), "apify_api_abc");
-});
-
-test("apifyTokenFromHeaders: Headers instance", () => {
-	assert.equal(apifyTokenFromHeaders(new Headers({ "X-APIFY-TOKEN": " apify_api_abc " })), "apify_api_abc");
-});
-
-test("apifyTokenFromHeaders: missing, empty or longer than 512 chars -> undefined", () => {
-	assert.equal(apifyTokenFromHeaders(undefined), undefined);
-	assert.equal(apifyTokenFromHeaders({}), undefined);
-	assert.equal(apifyTokenFromHeaders({ "x-apify-token": "   " }), undefined);
-	assert.equal(apifyTokenFromHeaders({ "x-apify-token": "a".repeat(512) }), "a".repeat(512));
-	assert.equal(apifyTokenFromHeaders({ "x-apify-token": "a".repeat(513) }), undefined);
-});

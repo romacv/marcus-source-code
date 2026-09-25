@@ -4,7 +4,7 @@
 
 - Marcus больше не хранит токены сторонних сервисов. Хранение токена Apify (`scraper_token:*` в `MARCUS_KV`) прекращено 2026-09-25, ключи удалены
 - Удалены инструмент `connect_reel_scraper`, модуль `scraper-settings.ts` и страница `/settings/reels` (сейчас отвечает 410, удалить в следующем релизе)
-- Instagram: либо собственный коннектор Apify пользователя (`https://mcp.apify.com`) и повторный `reel_frames` с `video_url`, либо заголовок `X-Apify-Token` только на один вызов
+- Instagram: только через собственный коннектор Apify пользователя (`https://mcp.apify.com`) и повторный `reel_frames` с `video_url`. Код обращения к API Apify из воркера удален
 - Правило на будущее: [`docs/third-party-credentials.md`](./third-party-credentials.md)
 
 ## 2026-09-24 — Reels

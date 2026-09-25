@@ -6,7 +6,7 @@ import app from "./app";
 import { anonId } from "./audit";
 import { formatToolError, isStructuredToolError, StructuredToolError } from "./errors";
 import { checkAndIncrement, dailyCapFor, resolveTier } from "./rate-limit";
-import { apifyTokenFromHeaders, getReelFrames, type MediaLike } from "./reel-media";
+import { getReelFrames, type MediaLike } from "./reel-media";
 import {
 	appendUnderHeading,
 	buildReelNote,
@@ -83,10 +83,7 @@ const FrontmatterSchema = z.object({
 });
 
 type GitHubFile = Awaited<ReturnType<GitHubClient["getFile"]>>;
-type ToolExtra = {
-	requestId?: string | number;
-	requestInfo?: { url?: string | URL; headers?: Record<string, string | string[] | undefined> | Headers };
-};
+type ToolExtra = { requestId?: string | number; requestInfo?: { url?: string | URL } };
 
 type MemoryRecord = ParsedMemoryLine & {
 	category: MemoryCategory;
@@ -1139,10 +1136,8 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				if (video_url && !video_url.startsWith("https://")) {
 					throw new StructuredToolError("invalid_argument", "video_url must be https", "fix_input");
 				}
-				// Per-call only: never stored or logged.
-				const apifyToken = parsed.source === "instagram" ? apifyTokenFromHeaders(extra?.requestInfo?.headers) : undefined;
 				const [result, existing] = await Promise.all([
-					getReelFrames({ parsed, media: this.env.MEDIA, videoUrl: video_url, apifyToken, count: frames }),
+					getReelFrames({ parsed, media: this.env.MEDIA, videoUrl: video_url, count: frames }),
 					this.findExistingReel(parsed.source, parsed.source_id).catch(() => null),
 				]);
 				const { meta } = result;
