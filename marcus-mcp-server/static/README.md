@@ -57,12 +57,16 @@ After adding on desktop, the connector automatically appears in the **Claude iPh
 | `get_recent_notes` | Get your most recently updated notes |
 | `delete_note` | Archive or permanently delete a note |
 | `reel_frames` | Fetch an Instagram Reel / YouTube Shorts / TikTok and return its caption and key frames |
-| `connect_reel_scraper` | Give a one-time link to save your own Apify token, needed for Instagram |
 | `save_reel` | Save a reel as a note in `50-resources/reels/` and log it in today's daily note |
 | `search_reels` | Search saved reels by text, tags or author |
 | `list_reels` | List recently saved reels |
 
 **Reels:** write *"Marcus reels <link>"* in chat. Claude looks at the frames, saves a note with a frame-by-frame breakdown, then files any follow-ups (memories, to-dos) on its own. Videos are processed in memory and never stored.
+
+**Instagram:** Instagram blocks anonymous access from cloud servers, and Marcus never stores your tokens. Two ways to get Instagram reels:
+
+1. Connect the official Apify connector (`https://mcp.apify.com`) with your own Apify account. When Instagram is blocked, Claude resolves the link through it and calls `reel_frames` again with the direct `video_url`. Marcus never sees your Apify token.
+2. Send your Apify token in the `X-Apify-Token` request header. It is used only for that one call, in memory, and is never written or logged.
 
 ---
 

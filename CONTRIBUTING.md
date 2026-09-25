@@ -36,6 +36,7 @@ npm run dev            # local dev (uses wrangler dev)
 ## What we won't merge (without strong justification)
 
 - Features that require storing user content on Marcus's server. The contentless server posture is a hard constraint.
+- Features that store, persist or log a user's credentials for any third-party service (Apify, Telegram, OpenAI, ...), encrypted or not. See [`docs/third-party-credentials.md`](./docs/third-party-credentials.md).
 - Direct dependencies on a specific AI provider (Claude/ChatGPT/Perplexity) — Marcus stays vendor-neutral.
 - Telemetry that can identify a user.
 - Background tasks on the free tier that materially increase Workers cost.

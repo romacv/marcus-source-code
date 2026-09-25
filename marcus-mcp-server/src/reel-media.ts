@@ -86,6 +86,26 @@ type ApifyInstagramItem = {
 };
 
 // Instagram blocks anonymous requests from cloud IPs; the user's own Apify token gets through.
+const MAX_APIFY_TOKEN_LEN = 512;
+
+// Reads the caller's Apify token from the X-Apify-Token request header. The token lives only
+// for the current call: it is never written to storage and must never be logged.
+export function apifyTokenFromHeaders(
+	headers: Record<string, string | string[] | undefined> | Headers | undefined,
+): string | undefined {
+	if (!headers) return undefined;
+	let raw: string | string[] | null | undefined;
+	if (headers instanceof Headers) {
+		raw = headers.get("x-apify-token");
+	} else {
+		const key = Object.keys(headers).find((k) => k.toLowerCase() === "x-apify-token");
+		raw = key === undefined ? undefined : headers[key];
+	}
+	const value = (Array.isArray(raw) ? raw[0] : raw)?.trim();
+	if (!value || value.length > MAX_APIFY_TOKEN_LEN) return undefined;
+	return value;
+}
+
 export async function fetchInstagramViaApify(url: string, token: string): Promise<ExtractedReel | null> {
 	try {
 		const res = await fetch(APIFY_INSTAGRAM_URL, {
@@ -196,7 +216,8 @@ export async function getReelFrames(opts: {
 		throw new StructuredToolError(
 			"upstream_unavailable",
 			parsed.source === "instagram" && !opts.apifyToken
-				? `Instagram blocks anonymous access to ${parsed.url}. Call connect_reel_scraper and give the user the link to add their Apify token, then retry.`
+				? `Instagram blocks anonymous access to ${parsed.url}. Resolve the link with the user's own Apify connector (https://mcp.apify.com) ` +
+					"and call reel_frames again with video_url set to the direct MP4 link, or send the request with an X-Apify-Token header."
 				: `Could not fetch frames or caption for ${parsed.url}. The post may be private or deleted; pass video_url with a direct MP4 link.`,
 			"fix_input",
 		);

@@ -16,7 +16,6 @@ import {
 } from "./github-oauth";
 import { homeContent, layout, privacyContent, termsContent, docsContent } from "./utils";
 import { findUnrelatedVaultEntries } from "./vault-guard.ts";
-import { peekScraperLink, redeemScraperLink } from "./scraper-settings.ts";
 import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
 
 export type Bindings = MarcusEnv & {
@@ -334,55 +333,10 @@ app.get("/vault/conflict", async (c) => {
 	return c.html(layout(await content, "Marcus — Vault conflict"));
 });
 
-// One-time page where a user saves their own Apify token for Instagram reels.
-// The link comes from the connect_reel_scraper tool, so the token never passes through chat.
-function reelsSettingsPage(body: ReturnType<typeof html>) {
-	return html`
-    <section class="section" style="max-width:560px;margin-inline:auto">
-      <p class="section__eyebrow">Reels</p>
-      <h1>Instagram access</h1>
-      ${body}
-    </section>
-  `;
-}
-
-app.get("/settings/reels", async (c) => {
-	const nonce = c.req.query("t") ?? "";
-	const userId = await peekScraperLink(c.env.MARCUS_KV, nonce);
-	const body = userId
-		? html`
-        <p>Instagram blocks anonymous access from cloud servers. Marcus fetches reels through <a href="https://apify.com" rel="noopener">Apify</a> with your own token; Apify bills your account per reel.</p>
-        <h2>Get your token</h2>
-        <ol class="connect-steps">
-          <li>Create a free account at <a href="https://console.apify.com/sign-up" rel="noopener">console.apify.com/sign-up</a> (or sign in).</li>
-          <li>Open <a href="https://console.apify.com/settings/integrations" rel="noopener">Settings &rarr; API &amp; Integrations</a>.</li>
-          <li>In <strong>Personal API tokens</strong>, click the copy icon next to the default token.</li>
-          <li>Paste it below and click <strong>Save token</strong>.</li>
-        </ol>
-        <form method="post" action="/settings/reels">
-          <input type="hidden" name="t" value="${nonce}">
-          <p><input type="password" name="token" autocomplete="off" placeholder="apify_api_..." style="width:100%;padding:.6rem"></p>
-          <p><button class="cta--primary" type="submit">Save token</button></p>
-          <p style="color:var(--subtle)">Leave empty and save to remove a stored token. This link works once and expires in 15 minutes.</p>
-        </form>`
-		: html`<p>This link is invalid or has expired. Ask your assistant for a new one.</p>`;
-	return c.html(layout(await reelsSettingsPage(body), "Reels settings · Marcus"), userId ? 200 : 410);
-});
-
-app.post("/settings/reels", async (c) => {
-	const form = await c.req.parseBody();
-	const nonce = typeof form.t === "string" ? form.t : "";
-	const token = typeof form.token === "string" ? form.token : "";
-	if (token.length > 512) return c.text("Token too long", 400);
-	const outcome = await redeemScraperLink(c.env.MARCUS_KV, c.env.KV_ENCRYPTION_KEY, nonce, token);
-	const message =
-		outcome === "saved"
-			? "Token saved. Go back to your chat and send the reel again."
-			: outcome === "removed"
-				? "Token removed."
-				: "This link is invalid or has expired. Ask your assistant for a new one.";
-	return c.html(layout(await reelsSettingsPage(html`<p>${message}</p>`), "Reels settings · Marcus"), outcome === "invalid_link" ? 410 : 200);
-});
+// Retired: Marcus no longer stores third-party tokens. Kept for one release, then remove.
+app.on(["GET", "POST"], "/settings/reels", (c) =>
+	c.text("This page is no longer used. Marcus does not store Apify tokens; set the token on the client side (X-Apify-Token header or your own Apify connector).", 410),
+);
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.3.0", time: new Date().toISOString() }));
 

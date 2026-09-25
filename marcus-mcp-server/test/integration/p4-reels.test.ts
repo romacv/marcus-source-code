@@ -144,3 +144,17 @@ describe("reel_frames", () => {
 		expect(result.code).toBe("invalid_argument");
 	});
 });
+
+describe("retired /settings/reels", () => {
+	test("GET and POST answer 410 and never touch KV", async () => {
+		const { default: app } = await import("../../src/app");
+		const { env } = await import("cloudflare:test");
+		for (const method of ["GET", "POST"]) {
+			const res = await app.request("/settings/reels?t=x", { method }, env);
+			expect(res.status).toBe(410);
+			expect(await res.text()).toMatch(/no longer used/);
+		}
+		const keys = await env.MARCUS_KV.list({ prefix: "scraper_" });
+		expect(keys.keys).toEqual([]);
+	});
+});
