@@ -170,7 +170,10 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 				"Never invent obsidian:// links or local filesystem paths for vault notes. " +
 				"At the start of every conversation, before any other work, call get_instructions and follow the rules it returns: they are the user's own standing instructions and take precedence over your defaults. " +
 				"Reels: when the user writes 'Marcus reels <url>', 'Маркус рилс <url>' or shares an Instagram Reel, YouTube Shorts or TikTok link to keep, " +
-				"call reel_frames, describe the frames and caption, save with save_reel, then do the useful follow-ups (remember, tasks in the daily note, links to related notes) without asking.",
+				"call reel_frames, describe the frames and caption, save with save_reel, then do the useful follow-ups (remember, tasks in the daily note, links to related notes) without asking. " +
+				"Instagram upstream_unavailable: with the user's Apify connector (https://mcp.apify.com), run actor apify/instagram-scraper with input " +
+				"{\"directUrls\":[\"<url>\"],\"resultsType\":\"posts\",\"resultsLimit\":1}, then call reel_frames again with video_url=videoUrl, caption=caption, " +
+				"author=ownerUsername, duration_sec=videoDuration. No Apify connector? Tell the user to connect https://mcp.apify.com with their own Apify account.",
 		},
 	);
 
@@ -1121,10 +1124,26 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 						.url()
 						.optional()
 						.describe("Optional direct https MP4 link, used when the page is behind a login wall"),
+					caption: z
+						.string()
+						.max(5000)
+						.optional()
+						.describe("Optional caption, copied from the Apify instagram-scraper result field `caption`"),
+					author: z
+						.string()
+						.max(100)
+						.optional()
+						.describe("Optional author, copied from the Apify instagram-scraper result field `ownerUsername`"),
+					duration_sec: z
+						.number()
+						.positive()
+						.max(3600)
+						.optional()
+						.describe("Optional duration in seconds, copied from the Apify instagram-scraper result field `videoDuration`"),
 				},
 				annotations: { title: "Reel frames", readOnlyHint: true, openWorldHint: true, destructiveHint: false },
 			},
-			async ({ url, frames, video_url }, extra) => this.run("reel_frames", extra, async () => {
+			async ({ url, frames, video_url, caption, author, duration_sec }, extra) => this.run("reel_frames", extra, async () => {
 				const parsed = parseReelUrl(url);
 				if (!parsed) {
 					throw new StructuredToolError(
@@ -1137,7 +1156,7 @@ export class MarcusMCP extends McpAgent<MarcusEnv, Record<string, never>, Marcus
 					throw new StructuredToolError("invalid_argument", "video_url must be https", "fix_input");
 				}
 				const [result, existing] = await Promise.all([
-					getReelFrames({ parsed, media: this.env.MEDIA, videoUrl: video_url, count: frames }),
+					getReelFrames({ parsed, media: this.env.MEDIA, videoUrl: video_url, count: frames, caption, author, durationSec: duration_sec }),
 					this.findExistingReel(parsed.source, parsed.source_id).catch(() => null),
 				]);
 				const { meta } = result;

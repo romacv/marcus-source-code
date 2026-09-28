@@ -123,10 +123,23 @@ export async function getReelFrames(opts: {
 	media?: MediaLike;
 	videoUrl?: string;
 	count: number;
+	caption?: string;
+	author?: string;
+	durationSec?: number;
 }): Promise<ReelFramesResult> {
 	const { parsed, media, count } = opts;
 	const warnings: string[] = [];
-	const source = await resolveSource(parsed);
+	const hasClientMeta = opts.caption !== undefined || opts.author !== undefined || opts.durationSec !== undefined;
+	// The client already resolved the post through its own Apify connector; skip re-scraping Instagram.
+	const skipResolve = parsed.source === "instagram" && Boolean(opts.videoUrl) && hasClientMeta;
+	const empty: ExtractedReel = { videoUrl: null, author: "", caption: "", durationSec: null, thumbnailUrl: null };
+	const resolved = skipResolve ? { ...empty, title: "" } : await resolveSource(parsed);
+	const source: ExtractedReel & { title: string } = {
+		...resolved,
+		author: opts.author ?? resolved.author,
+		caption: opts.caption ?? resolved.caption,
+		durationSec: opts.durationSec ?? resolved.durationSec,
+	};
 	const videoUrl = opts.videoUrl ?? source.videoUrl;
 	let frames: ReelFrame[] = [];
 
@@ -157,8 +170,10 @@ export async function getReelFrames(opts: {
 		throw new StructuredToolError(
 			"upstream_unavailable",
 			parsed.source === "instagram"
-				? `Instagram blocks anonymous access to ${parsed.url}. Resolve the link with the user's own Apify connector (https://mcp.apify.com) ` +
-					"and call reel_frames again with video_url set to the direct MP4 link."
+				? `Instagram blocks anonymous access to ${parsed.url}. With the user's Apify connector (https://mcp.apify.com), run actor ` +
+					`apify/instagram-scraper with input {"directUrls":["${parsed.url}"],"resultsType":"posts","resultsLimit":1}, then call reel_frames ` +
+					"again with video_url=videoUrl, caption=caption, author=ownerUsername, duration_sec=videoDuration. No Apify connector? Tell the user " +
+					"to connect https://mcp.apify.com with their own Apify account."
 				: `Could not fetch frames or caption for ${parsed.url}. The post may be private or deleted; pass video_url with a direct MP4 link.`,
 			"fix_input",
 		);

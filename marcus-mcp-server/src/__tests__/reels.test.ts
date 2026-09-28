@@ -254,8 +254,39 @@ test("getReelFrames: nothing reachable -> upstream_unavailable", async () => {
 			(err: { code?: string; message?: string }) =>
 				err.code === "upstream_unavailable" &&
 				/https:\/\/mcp\.apify\.com/.test(err.message ?? "") &&
-				/video_url/.test(err.message ?? ""),
+				/video_url/.test(err.message ?? "") &&
+				/apify\/instagram-scraper/.test(err.message ?? "") &&
+				/directUrls/.test(err.message ?? ""),
 		);
 	});
 });
 
+test("getReelFrames: instagram video_url + caption/author/duration_sec from client -> no network scrape, meta uses provided values", async () => {
+	const times: string[] = [];
+	const calledUrls: string[] = [];
+	const original = globalThis.fetch;
+	globalThis.fetch = (async (input: RequestInfo | URL) => {
+		const url = String(input instanceof Request ? input.url : input);
+		calledUrls.push(url);
+		if (url.startsWith("https://cdn.example/v.mp4")) return new Response(new Uint8Array(16));
+		return new Response("nope", { status: 404 });
+	}) as typeof fetch;
+	try {
+		const r = await getReelFrames({
+			parsed: parseReelUrl("https://www.instagram.com/reel/ABC/")!,
+			media: fakeMedia(times),
+			videoUrl: "https://cdn.example/v.mp4",
+			caption: "provided caption",
+			author: "provided_author",
+			durationSec: 50,
+			count: 4,
+		});
+		assert.deepEqual(times, ["10s", "20s", "30s", "40s"]);
+		assert.equal(r.meta.caption, "provided caption");
+		assert.equal(r.meta.author, "provided_author");
+		assert.equal(r.meta.durationSec, 50);
+		assert.ok(calledUrls.every((u) => !u.includes("instagram.com") && !u.includes("api.apify.com")));
+	} finally {
+		globalThis.fetch = original;
+	}
+});

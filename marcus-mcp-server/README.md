@@ -147,8 +147,8 @@ and resetting state proves all of them.
 > window. Every line of migration code written before the first real user
 > is wasted complexity that will outlive the constraint that justified it.
 >
-> Re-evaluate this policy at first public launch (TODO: link to launch
-> checklist when it exists). After that point, any schema or seed change
+> Re-evaluate this policy at first public launch (see the launch checklist in
+> `docs/PUBLISH.md`). After that point, any schema or seed change
 > requires a real migration plan.
 
 ### 1. Reset to a clean new-user state

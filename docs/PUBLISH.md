@@ -6,20 +6,20 @@ Distribution channels for the MCP server / app. Work top-to-bottom; each section
 
 ## 0. Prerequisites (do once, reused everywhere)
 
-- [ ] Stable public name + slug: `marcus-second-brain`
+- [x] Stable public name + slug: `marcus-second-brain`
 - [ ] One-line description (≤120 chars)
-- [ ] Long description / README with: what it does, install, config, example prompts, privacy
-- [ ] Logo / icon: 512×512 PNG (transparent), 1024×1024 master, square + rounded variants
-- [ ] Screenshots: 3–6 PNG, 1280×800 or 1920×1080, real product UI (no placeholders)
-- [ ] Demo video (optional but boosts approval): 30–60s, 1080p, no audio narration required
-- [ ] Public website / landing page URL
-- [ ] Privacy policy URL (required by every store)
-- [ ] Terms of service URL
-- [ ] Support email + support URL
-- [ ] OAuth / auth flow documented (if applicable)
+- [x] Long description / README with: what it does, install, config, example prompts, privacy
+- [x] Logo / icon: 512×512 PNG (transparent), 1024×1024 master, square + rounded variants
+- [x] Screenshots: 3–6 PNG, 1280×800 or 1920×1080, real product UI (no placeholders)
+- [x] Demo video (optional but boosts approval): 30–60s, 1080p, no audio narration required
+- [x] Public website / landing page URL
+- [x] Privacy policy URL (required by every store)
+- [x] Terms of service URL
+- [x] Support email + support URL
+- [x] OAuth / auth flow documented (if applicable)
 - [ ] Versioned release: tagged GitHub release, semver, CHANGELOG.md
 - [ ] License chosen (MIT/Apache-2.0 recommended for distribution)
-- [ ] Test account credentials for reviewers (where applicable)
+- [x] Test account credentials for reviewers (where applicable)
 
 ---
 
@@ -88,12 +88,12 @@ Anthropic's MCP Connector Directory for claude.ai integrations.
 
 Form: https://clau.de/mcp-directory-submission
 
-- [ ] MCP server reachable at `https://marcus-second-brain.com/mcp` (Streamable HTTP)
-- [ ] OAuth endpoints verified: authorize, token, register
-- [ ] All 14 tools documented with names and descriptions
+- [x] MCP server reachable at `https://marcus-second-brain.com/mcp` (Streamable HTTP)
+- [x] OAuth endpoints verified: authorize, token, register
+- [ ] All tools documented with names and descriptions
 - [ ] Icon at 512×512 PNG and screenshots (5, 1280-wide) uploaded to public URLs
 - [ ] Demo video recorded and URL ready
-- [ ] Privacy policy and Terms of Service URLs live
+- [x] Privacy policy and Terms of Service URLs live
 - [ ] Public help-center article or blog post live before go-live date (Anthropic requirement)
 - [ ] Submit via the form above
 - [ ] Address review feedback
@@ -124,7 +124,7 @@ Marcus is an MCP server — list it everywhere MCP clients discover servers.
   - [ ] README with install + config snippet for Claude Desktop / Cursor
 - [ ] **Docker Hub / GHCR** — multi-arch image (linux/amd64, linux/arm64)
 - [ ] **Homebrew tap** (optional) — formula in your tap repo
-- [ ] **Cloudflare Workers** — already used (`marcus-mcp-server/.wrangler`); confirm production deployment + custom domain + Wrangler `wrangler deploy` in CI
+- [x] **Cloudflare Workers** — already used (`marcus-mcp-server/.wrangler`); confirm production deployment + custom domain + Wrangler `wrangler deploy` in CI
 
 ---
 
@@ -146,9 +146,9 @@ Marcus is an MCP server — list it everywhere MCP clients discover servers.
 
 - [ ] Error monitoring (Sentry / Cloudflare Workers analytics)
 - [ ] Usage metrics (server-side, privacy-respecting)
-- [ ] Rate limiting on public endpoints
-- [ ] Status page or `/health` endpoint
-- [ ] Secrets in Wrangler / GitHub Secrets — never in repo
+- [x] Rate limiting on public endpoints
+- [x] Status page or `/health` endpoint
+- [x] Secrets in Wrangler / GitHub Secrets — never in repo
 - [ ] CI: lint, test, deploy on tag
 - [ ] Backup / restore plan for any persisted state
 - [ ] Incident response contact
