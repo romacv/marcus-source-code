@@ -28,6 +28,10 @@ export async function getCachedInstallationToken(
 	return parsed.token;
 }
 
+export async function clearCachedInstallationToken(kv: KVNamespace, installationId: string): Promise<void> {
+	await kv.delete(`install_token:${installationId}`);
+}
+
 export async function setCachedInstallationToken(
 	kv: KVNamespace,
 	encryptionKey: string,

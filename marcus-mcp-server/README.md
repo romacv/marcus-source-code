@@ -14,7 +14,12 @@ the OAuth provider's KV namespace.
 
 - `src/index.ts` — `MarcusMCP` agent, tool registration, MCP routing (`/mcp`).
 - `src/app.ts` — Hono app: home page, `/authorize`, `/auth/github/callback`,
-  `/vault/install`, `/vault/conflict`, `/vault/setup`.
+  `/vault/install`, `/vault/conflict`, `/vault/setup`, and the secrets page routes
+  (`/settings/secrets`, `/settings/secrets/public-key`, `DELETE /settings/secrets/:name`).
+- `src/secrets.ts` — secrets page: GitHub sign-in cookie, CSRF token, allowlist, relay of a
+  browser-sealed value to GitHub Actions secrets. Browser side: `static/js/secrets.js` and the
+  bundled libsodium `static/js/sodium.min.js` (`libsodium-wrappers` 0.8.4 via esbuild IIFE, exposes
+  `sodiumReady`; its SRI hash is pinned in `src/secrets.ts`, update both together).
 - `src/github-oauth.ts` — OAuth + GitHub App handlers, `provisionVault`,
   `marcusVaultExists`.
 - `src/vault.ts` — Vault constants (`VAULT_REPO_NAME`, seed files, frontmatter

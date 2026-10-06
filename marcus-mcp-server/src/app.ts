@@ -4,8 +4,8 @@ import { html } from "hono/html";
 import { anonId } from "./audit.ts";
 import { StructuredToolError } from "./errors.ts";
 import type { MarcusEnv } from "./index";
-import { encryptForKv, hmacSign, hmacVerify } from "./crypto";
-import { GitHubClient } from "./github";
+import { encryptForKv, hmacSign, hmacVerify } from "./crypto.ts";
+import { GitHubClient } from "./github.ts";
 import {
 	exchangeCodeForUserToken,
 	findInstallationByLogin,
@@ -13,10 +13,11 @@ import {
 	getAuthenticatedUser,
 	provisionVault,
 	vaultRepoState,
-} from "./github-oauth";
-import { homeContent, layout, privacyContent, termsContent, docsContent } from "./utils";
+} from "./github-oauth.ts";
+import { homeContent, layout, privacyContent, termsContent, docsContent } from "./utils.ts";
+import secrets, { completeSettingsLogin, loginPurpose } from "./secrets.ts";
 import { findUnrelatedVaultEntries } from "./vault-guard.ts";
-import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault";
+import { VAULT_REPO_NAME, VAULT_SEED_FILES } from "./vault.ts";
 
 export type Bindings = MarcusEnv & {
 	OAUTH_PROVIDER: OAuthHelpers;
@@ -45,12 +46,16 @@ app.use("*", async (c, next) => {
 });
 
 const CSP_PATHS_RE = /^\/(authorize|register|auth\/|vault\/|settings\/)/;
+// The secrets page runs same-origin scripts only (libsodium needs 'wasm-unsafe-eval' for WebAssembly).
+const SECRETS_PAGE_RE = /^\/settings\/secrets\/?$/;
 app.use("*", async (c, next) => {
 	await next();
-	if (!CSP_PATHS_RE.test(new URL(c.req.url).pathname)) return;
+	const pathname = new URL(c.req.url).pathname;
+	if (!CSP_PATHS_RE.test(pathname)) return;
 	if (c.res.headers.get("content-type")?.includes("text/html")) {
+		const scriptSrc = SECRETS_PAGE_RE.test(pathname) ? "'self' 'wasm-unsafe-eval'" : "'none'";
 		c.header("Content-Security-Policy",
-			"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'none'; frame-ancestors 'none'");
+			`default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src ${scriptSrc}; frame-ancestors 'none'`);
 		c.header("X-Content-Type-Options", "nosniff");
 		c.header("Referrer-Policy", "no-referrer");
 	}
@@ -113,6 +118,11 @@ app.get("/auth/github/callback", async (c) => {
 
 	if (typeof statePayload.ts !== "number" || Date.now() - statePayload.ts > STATE_MAX_AGE_MS) {
 		return c.text("State expired. Please connect again.", 400);
+	}
+
+	// --- Settings page sign-in (/settings/secrets) ---
+	if ((statePayload as { p?: string }).p === loginPurpose) {
+		return completeSettingsLogin(c, statePayload);
 	}
 
 	// --- Phase 2: GitHub App installation callback ---
@@ -332,6 +342,9 @@ app.get("/vault/conflict", async (c) => {
 	`;
 	return c.html(layout(await content, "Marcus — Vault conflict"));
 });
+
+// Saves third-party tokens as GitHub Actions secrets in the user's vault repo (sealed in the browser).
+app.route("/settings/secrets", secrets);
 
 // Retired: Marcus no longer stores third-party tokens. Kept for one release, then remove.
 app.on(["GET", "POST"], "/settings/reels", (c) =>

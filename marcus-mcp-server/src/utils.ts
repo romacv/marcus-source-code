@@ -1298,6 +1298,7 @@ export const privacyContent = async (): Promise<HtmlEscapedString> => html`
 		<h2>Encryption</h2>
 		<p>GitHub access tokens are encrypted at rest using <strong>AES-256-GCM</strong> before being written to Cloudflare KV. The encryption key lives in a Cloudflare Worker environment secret (<code>KV_ENCRYPTION_KEY</code>) and is never logged or transmitted outside the Worker runtime.</p>
 		<p>Marcus does not store credentials for other services (for example Apify). Such tokens stay with your own connector for that service in your AI client. Stored Apify tokens were deleted on 2026-09-25.</p>
+		<p>If you save such a token on the Marcus secrets page, it is encrypted in your browser and written as a GitHub Actions secret in your own vault repository. Marcus receives only the encrypted value, passes it to GitHub in a single request, and does not store or log it. GitHub secrets are write-only, so Marcus cannot read the token back. Only workflows in your repository use it.</p>
 
 		<h2>Retention</h2>
 		<ul>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-06 — Secrets page
+
+- Новая страница `/settings/secrets`: токен стороннего сервиса (например `TELEGRAM_BOT_TOKEN`) шифруется в браузере libsodium `crypto_box_seal` публичным ключом репозитория и сохраняется как Actions secret в `marcus-second-brain-vault` пользователя. Воркер получает только `{ name, key_id, encrypted_value }`, передает в GitHub одним `PUT` и ничего не хранит и не логирует
+- Маршруты: `GET /settings/secrets`, `GET /settings/secrets/public-key`, `POST /settings/secrets`, `DELETE /settings/secrets/:name`; вход через GitHub OAuth Marcus (cookie-сессия), CSRF-токен на POST и DELETE (15 минут), белый список имен
+- CSP для этой страницы: `script-src 'self' 'wasm-unsafe-eval'` (libsodium работает на WebAssembly), остальные пути без изменений
+- Новое право GitHub App: `Secrets: Read and write`; для запуска workflow в будущих интеграциях `Actions: Read and write`. После смены прав установившие App должны подтвердить их на `https://github.com/settings/installations`
+
 ## 2026-09-25 — No third-party secrets
 
 - `reel_frames` теперь принимает `caption`, `author` и `duration_sec` из результата собственного коннектора Apify пользователя, чтобы Instagram-рилсы сохранялись с описанием, автором и длительностью без повторного анонимного скрейпинга

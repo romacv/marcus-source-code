@@ -74,6 +74,8 @@ Marcus is **contentless by design**. Your note content never passes through or i
 - A mapping from your Marcus user ID to your GitHub App installation ID
 - Short-lived OAuth tokens (TTL 24h)
 
+Tokens for other services (for example a Telegram bot token) are saved from the Marcus secrets page as **GitHub Actions secrets in your own vault repository**. The page seals the value in your browser with libsodium before sending it, so Marcus only relays an encrypted value to GitHub in one request, does not store or log it, and cannot read it back (GitHub secrets are write-only). Only workflows in your repository use the token.
+
 All writes go directly from Marcus to your private GitHub repository via short-lived installation tokens. The Marcus software is proprietary; the source repository is public for transparency only.
 
 ---

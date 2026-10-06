@@ -1,6 +1,6 @@
 import { createPrivateKey, createSign } from "node:crypto";
 import { mapGitHubError, StructuredToolError } from "./errors.ts";
-import { getCachedInstallationToken, setCachedInstallationToken } from "./github-token-cache.ts";
+import { clearCachedInstallationToken, getCachedInstallationToken, setCachedInstallationToken } from "./github-token-cache.ts";
 import { anonId } from "./audit.ts";
 import { parseFrontmatter } from "./vault.ts";
 
@@ -170,6 +170,34 @@ export class GitHubClient {
 			throw mapGitHubError(res.status, res.headers, body);
 		}
 		return res;
+	}
+
+	// Raw call to the repository's Actions secrets API ("?per_page=100" lists, "/public-key", "/NAME").
+	// Returns the response untouched so the settings page can show precise messages; the
+	// request body (a sealed value) goes straight to fetch and is never logged or stored.
+	async actionsSecretsRequest(method: "GET" | "PUT" | "DELETE", suffix: string, body?: object): Promise<Response> {
+		const send = async () => {
+			const token = await this.getToken();
+			return fetch(`${GITHUB_API}/repos/${this.owner}/${this.repo}/actions/secrets${suffix}`, {
+				method,
+				headers: {
+					Authorization: `Bearer ${token}`,
+					Accept: "application/vnd.github+json",
+					"X-GitHub-Api-Version": "2022-11-28",
+					"Content-Type": "application/json",
+					"User-Agent": "marcus-mcp-server/0.2.0",
+				},
+				...(body ? { body: JSON.stringify(body) } : {}),
+			});
+		};
+		const res = await send();
+		if (res.status !== 403) return res;
+		// A cached installation token may predate a newly approved permission: drop it and retry once.
+		const detail = await res.clone().text();
+		if (!/resource not accessible/i.test(detail)) return res;
+		await clearCachedInstallationToken(this.kv, this.installationId);
+		this._cachedToken = null;
+		return send();
 	}
 
 	async branchExists(branch: string): Promise<boolean> {
