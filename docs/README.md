@@ -21,7 +21,7 @@
 
 ## Статус
 
-Фаза: **P0 — Admin**. Все зафиксированные решения → [07-roadmap-and-decisions.md](./07-roadmap-and-decisions.md).
+Все зафиксированные решения → [07-roadmap-and-decisions.md](./07-roadmap-and-decisions.md).
 
 ## Главные риски (active)
 
